@@ -2,152 +2,179 @@
 
 **Date**: 2026-09-16
 **Spec**: `.specs/features/create-user/spec.md`
-**Diff range**: working-tree (no git): create-user files
+**Diff range**: working-tree (git deferred)
 **Verifier**: independent sub-agent (author ≠ verifier)
+
+---
 
 ## Validation
 
-Feature `create-user`. Independent verifier.
+**Result**: PASS
 
 ---
 
 ## Task Completion
 
-Tasks.md ausente (fase Tasks pulada). Passos implícitos do Execute:
-
 | Task | Status | Notes |
 | ---- | ------ | ----- |
-| T1 Align User model + factory with users table | Done | `HasUuids`, fillable sem `email_verified_at`, cast `hashed`, factory alinhada às colunas da migration |
-| T2 CreateUser action + validation tests | Done | Action valida e persiste; testes de feature cobrem happy path, erros e schema |
+| T1 | ✅ Done | `deleted_at` via `$table->softDeletes()` na migration `users` |
+| T2 | ✅ Done | `HASH_DRIVER=argon` em `.env.example` e `phpunit.xml` |
+| T3 | ✅ Done | Entidade Domain sem Illuminate; `UserRepository` declara `existsByEmail` e `create` |
+| T4 | ✅ Done | Histórico: validação saiu do use case em T7 |
+| T5 | ✅ Done | Model Infra com `HasUuids`, `SoftDeletes`, cast `hashed`; `app/Models/User.php` removido |
+| T6 | ✅ Done | `EloquentUserRepository`; bind em `AppServiceProvider`; `app/Actions/CreateUser.php` removido |
+| T7 | ✅ Done | `CreateUser::execute` só delega ao repositório |
+| T8 | ✅ Done | `StoreUserRequest`, `UserController`, rotas GET/POST, testes HTTP |
+| T9 | ✅ Done | `Pages/User/Create.jsx`, layout, `users.js`, `app.jsx`; sem Index/Edit/Hooks |
 
 ---
 
 ## Spec-Anchored Acceptance Criteria
 
+Re-derived from `spec.md`. Assertions checked against the spec-defined outcome, not the implementation shape.
+
+### P1: Criar usuário no módulo User
+
 | Criterion (WHEN X THEN Y) | Spec-defined outcome | `file:line` + assertion | Result |
 | ------------------------- | -------------------- | ----------------------- | ------ |
-| WHEN name, email e password válidos são fornecidos THEN persistir uma linha em `users` com esses valores de name e email | Linha persistida com `name` = `Ada Lovelace` e `email` = `ada@example.com` | `tests/Feature/User/CreateUserTest.php:30` - `$this->assertSame('Ada Lovelace', $user->name)`; `CreateUserTest.php:31` - `$this->assertSame('ada@example.com', $user->email)`; `CreateUserTest.php:41` - `$this->assertDatabaseCount('users', 1)`; `CreateUserTest.php:42` - `$this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Ada Lovelace', 'email' => 'ada@example.com'])` | covered |
-| WHEN o usuário é persistido THEN atribuir um `id` UUID | `id` é UUID | `tests/Feature/User/CreateUserTest.php:29` - `$this->assertTrue(Str::isUuid($user->id))` | covered |
-| WHEN o usuário é persistido THEN armazenar `password` em hash diferente do texto puro e verificável com o texto original | Hash ≠ `'secret123'` e `Hash::check('secret123', stored)` é true | `tests/Feature/User/CreateUserTest.php:32` - `$this->assertNotSame('secret123', $user->getAuthPassword())`; `CreateUserTest.php:33` - `$this->assertTrue(Hash::check('secret123', $user->getAuthPassword()))` | covered |
-| The system SHALL persistir somente as colunas `id`, `name`, `email`, `password`, `remember_token`, `created_at` e `updated_at` | Conjunto de atributos persistidos ⊆ essas 7 colunas (nenhuma extra) | `tests/Feature/User/CreateUserTest.php:38` - `$this->assertSame([], array_values(array_diff(array_keys($user->getAttributes()), $allowed)))`; `tests/Feature/User/UserSchemaTest.php:33` - mesma asserção no factory | covered |
-| IF `name`, `email` ou `password` estiver ausente THEN lançar `ValidationException` na chave do campo ausente sem persistir registro | `ValidationException` com chave `name`/`email`/`password`; `users` permanece com 0 linhas | `tests/Feature/User/CreateUserTest.php:68` - `$this->assertArrayHasKey($field, $exception->errors())`; `CreateUserTest.php:71` - `$this->assertDatabaseCount('users', 0)`; provider em `CreateUserTest.php:133` cobre os três campos | covered |
-| IF o email já existir em `users` THEN lançar `ValidationException` na chave `email` sem persistir registro adicional | `ValidationException` em `email`; count permanece 1; nome `Ada Two` não gravado | `tests/Feature/User/CreateUserTest.php:88` - `$this->assertArrayHasKey('email', $exception->errors())`; `CreateUserTest.php:91` - `$this->assertDatabaseCount('users', 1)`; `CreateUserTest.php:92` - `$this->assertDatabaseMissing('users', ['name' => 'Ada Two'])` | covered |
-| IF `password` tiver menos de 8 caracteres THEN lançar `ValidationException` na chave `password` sem persistir registro | `ValidationException` em `password` para `'1234567'`; 0 linhas | `tests/Feature/User/CreateUserTest.php:105` - `$this->assertArrayHasKey('password', $exception->errors())`; `CreateUserTest.php:108` - `$this->assertDatabaseCount('users', 0)` | covered |
-| IF `email` não for um endereço válido THEN lançar `ValidationException` na chave `email` sem persistir registro | `ValidationException` em `email` para `'not-an-email'`; 0 linhas | `tests/Feature/User/CreateUserTest.php:121` - `$this->assertArrayHasKey('email', $exception->errors())`; `CreateUserTest.php:124` - `$this->assertDatabaseCount('users', 0)` | covered |
-| WHEN `remember_token` não é informado na criação THEN persistir `remember_token` nulo | `remember_token` is null | `tests/Feature/User/CreateUserTest.php:34` - `$this->assertNull($user->remember_token)` | covered |
+| WHEN name, email e password válidos THEN persistir linha em `users` com esses name e email | Row in `users` with given name and email | `tests/Feature/User/CreateUserPersistenceTest.php:27` - `assertSame('Ada Lovelace', $user->name)`; `:28` - `assertSame('ada@example.com', $user->email)`; `:29-30` same on Eloquent model; `:43-46` - `assertDatabaseHas('users', ['name' => 'Ada Lovelace', 'email' => 'ada@example.com'])` | ✅ PASS |
+| WHEN o usuário é persistido THEN atribuir um `id` UUID | Persisted `id` is a UUID | `tests/Feature/User/CreateUserPersistenceTest.php:26` - `assertTrue(Str::isUuid($user->id))` | ✅ PASS |
+| WHEN o usuário é persistido THEN `password` em hash Argon2i, diferente do texto puro, verificável com o original | Algo Argon2i; hash ≠ plaintext; `Hash::check` true | `tests/Feature/User/CreateUserPersistenceTest.php:31` - `assertNotSame('secret123', $user->passwordHash)`; `:32` - `assertTrue(Hash::check('secret123', $user->passwordHash))`; `:33` - `assertSame('argon2i', password_get_info(...)['algoName'])` | ✅ PASS |
+| The system SHALL persistir somente as colunas ADR-002 | Attributes ⊆ `{id,name,email,password,remember_token,created_at,updated_at,deleted_at}` | `tests/Feature/User/CreateUserPersistenceTest.php:39-40` - `assertSame([], array_values(array_diff(array_keys($model->getAttributes()), $allowed)))`; `tests/Feature/User/UserSchemaTest.php:33-34` - same allowlist on factory persist | ✅ PASS |
+| WHEN `remember_token` não é informado THEN persistir `remember_token` nulo | `remember_token` is null | `tests/Feature/User/CreateUserPersistenceTest.php:34` - `assertNull($user->rememberToken)`; `:48` - `'remember_token' => null` in `assertDatabaseHas` | ✅ PASS |
+| WHEN o usuário é persistido THEN persistir `deleted_at` nulo | `deleted_at` is null | `tests/Feature/User/CreateUserPersistenceTest.php:35` - `assertNull($user->deletedAt)`; `:47` - `'deleted_at' => null` in `assertDatabaseHas` | ✅ PASS |
 
-**Status**: All ACs covered
+### P2: HTTP de criação com validação no Form Request
 
-**Payload/conjunction**: testes assertam valor/estado persistido (`name`, `email`, hash verificável, `remember_token` null, count/has/missing na tabela), não só que um método foi chamado.
+| Criterion (WHEN X THEN Y) | Spec-defined outcome | `file:line` + assertion | Result |
+| ------------------------- | -------------------- | ----------------------- | ------ |
+| WHEN `GET /users/create` THEN 200 com a página Inertia `User/Create` | HTTP 200; Inertia component `User/Create` | `tests/Feature/User/CreateUserHttpTest.php:24` - `assertOk()`; `:26` - `$page->component('User/Create')` | ✅ PASS |
+| WHEN `POST /users` com name, email e password válidos THEN persistir a linha e redirecionar para `users.create` | Redirect to `users.create`; row with given name and email | `tests/Feature/User/CreateUserHttpTest.php:37` - `assertRedirect(route('users.create'))`; `:39` - `assertDatabaseCount('users', 1)`; `:40-43` - `assertDatabaseHas('users', ['name' => 'Ada Lovelace', 'email' => 'ada@example.com'])` | ✅ PASS |
+| IF `POST /users` omitir `name`, `email` ou `password` THEN erro de validação na chave do campo sem persistir | Session error on omitted key; 0 rows | `tests/Feature/User/CreateUserHttpTest.php:52` - `assertSessionHasErrors($field)` (provider `:161-172` covers name, email, password); `:54` - `assertDatabaseCount('users', 0)` | ✅ PASS |
+| IF `POST /users` enviar email já existente, inclusive com `deleted_at` preenchido, THEN erro na chave `email` sem registro adicional | Session error on `email`; count stays 1; no `Ada Two` row | Active: `tests/Feature/User/CreateUserHttpTest.php:70` - `assertSessionHasErrors('email')`; `:72` - `assertDatabaseCount('users', 1)`; `:73` - `assertDatabaseMissing('users', ['name' => 'Ada Two'])`. Soft-deleted: `:90` - `assertSessionHasErrors('email')`; `:92` - `assertSame(1, UserModel::withTrashed()->count())`; `:93` - `assertDatabaseMissing('users', ['name' => 'Ada Two'])` | ✅ PASS |
+| IF `POST /users` enviar `password` com menos de 8 caracteres THEN erro na chave `password` sem persistir | Session error on `password`; 0 rows | `tests/Feature/User/CreateUserHttpTest.php:105` - `assertSessionHasErrors('password')`; `:107` - `assertDatabaseCount('users', 0)` | ✅ PASS |
+| IF `POST /users` enviar `email` inválido THEN erro na chave `email` sem persistir | Session error on `email`; 0 rows | `tests/Feature/User/CreateUserHttpTest.php:119` - `assertSessionHasErrors('email')`; `:121` - `assertDatabaseCount('users', 0)` | ✅ PASS |
+| The system SHALL validar name, email, password e unicidade no Form Request, não no use case `CreateUser` | Validation on HTTP Form Request; use case only delegates persist | HTTP errors above prove Form Request. `tests/Unit/User/CreateUserTest.php:18-19` - `assertSame` name/email on returned entity; `:20-23` - `assertSame([['name' => 'Ada Lovelace', 'email' => 'ada@example.com', 'password' => 'secret123']], $users->created)` | ✅ PASS |
+
+**Status**: ✅ All ACs covered. 13/13 matched the spec-defined outcome. 0 spec-precision gaps.
+
+Payload/conjunction: P1 persist and P2 happy-path POST assert the stored `name` and `email` values, not only that create ran.
 
 ---
 
 ## Discrimination Sensor
 
-Isolamento: fallback de backup em `/tmp/create-user-sensor/CreateUser.php.bak` (sem git). Baseline sha256 pré-sensor:
+Scratch isolation: `git worktree add` + vendor symlink was invalid here. Composer classmap/`$baseDir` resolved to the real app, so mutants in the worktree were not loaded. Worktree removed. Fallback used: backups of the two target files, mutate the real copies one at a time, run tests, restore from backups. `git stash` was not used.
 
-- `app/Actions/CreateUser.php` = `c73bc7abd5508c56d81157088624f7c4e9b9e0fcfc460f6b685802f50dd5ab5c`
-- `app/Models/User.php` = `e9e0db32c5e04dff9591fb2e91075c619eb1e340fbe3f6e9f967fd1309b2b552`
-- `tests/Feature/User/CreateUserTest.php` = `b45076416d9d3ffe097dd39fc29b9c578ed93aeb82423e812e52fb2ff37388e4`
-- `tests/Feature/User/UserSchemaTest.php` = `d88c94b4235bd296f3b85b5c26cf8d5cfddaa1d082c1c311c508c508bff1b376`
+Baseline before sensor: `git status --porcelain` saved; sha256 `StoreUserRequest.php` = `8334a48e046e420cbda334d8a175fcfe5a57f383cb7a50e9fd480df8be8fc34b`; `UserController.php` = `933aa9373cb331a8173f172088bd1e70170861faa21df60598b88fb38fa689d6`. After cleanup, porcelain and both hashes matched.
 
-Pós-cleanup: hashes idênticos ao baseline.
+Command against scratch (real files while mutated): `php artisan test tests/Feature/User/CreateUserHttpTest.php`
 
 | Mutation | File:line | Description | Killed? |
 | -------- | --------- | ----------- | ------- |
-| 1 | `app/Actions/CreateUser.php:21` | Removido `unique:users,email` da regra de email | killed (`CreateUserTest.php:81` — UniqueConstraintViolationException em vez de ValidationException) |
-| 2 | `app/Actions/CreateUser.php:22` | `Password::defaults()` trocado por `Password::min(1)` | killed (`CreateUserTest.php:103` — `Expected ValidationException` para senha de 7 chars) |
-| 3 | `app/Actions/CreateUser.php:25` | `User::query()->create` substituído por `return new User($validated)` sem gravar | killed (`CreateUserTest.php:29` — UUID false; `CreateUserTest.php:58` — count 0) |
+| 1 | `app/Modules/User/Infra/Http/Requests/StoreUserRequest.php:23` | Dropped `Rule::unique('users', 'email')` from email | ✅ Killed (`CreateUserHttpTest.php:70` duplicate; `:90` soft-deleted; 2 failed, 9 passed; tests expected session error, got 500 unique constraint) |
+| 2 | `app/Modules/User/Infra/Http/Requests/StoreUserRequest.php:24` | `Password::defaults()` → `Password::min(7)` so 7-char passwords pass | ✅ Killed (`CreateUserHttpTest.php:105` - session missing `errors`; 1 failed, 10 passed) |
+| 3 | `app/Modules/User/Infra/Http/Controllers/UserController.php:16` | `Inertia::render('User/Create')` → `'User/Index'` | ✅ Killed (`CreateUserHttpTest.php:26` - expected `User/Create`, got `User/Index`; 1 failed, 10 passed) |
 
 **Sensor depth**: lightweight
-**Result**: PASS
+**Result**: 3/3 killed - PASS ✅
 
 ---
 
 ## Interactive UAT Results (if performed)
 
-UAT pulado: feature backend-only, sem UI.
+UAT skipped. Verifier is a sub-agent; cannot wait on a human. GET Inertia `User/Create` and POST contracts are covered by Feature HTTP tests. The create form is a single page without complex interaction that needs human judgment.
 
 | # | Test | Result | Details |
 | --- | ---- | ------ | ------- |
-| 1 | UAT | skipped | backend-only, no UI |
+| 1 | Interactive UAT | ⏭️ Skip | Automated HTTP covers the user-facing contract |
 
 ---
 
 ## Code Quality
 
+Checked against `.cursor/skills/tlc-spec-driven/references/coding-principles.md` and `docs/tests.md`.
+
 | Principle | Status |
 | --------- | ------ |
-| Minimum code | yes |
-| Surgical changes | yes |
-| No scope creep | yes |
-| Matches patterns | yes |
-| Spec-anchored outcome check (asserted values match spec) | yes |
-| Per-layer Coverage Expectation met (domain 1:1 ACs; routes happy+edge+error) | yes |
-| Every test maps to a spec requirement - no unclaimed tests | yes |
-| Documented guidelines followed: `.cursor/skills/tlc-spec-driven/references/coding-principles.md` | yes |
+| Minimum code | ✅ |
+| Surgical changes | ✅ |
+| No scope creep | ✅ (no Index/Edit/Hooks; seeder RF19 not added; seeder only retargets the Infra model) |
+| Matches patterns | ✅ (module Domain/Application/Infra; Domain has no Illuminate; thin controller + Form Request) |
+| Spec-anchored outcome check (asserted values match spec) | ✅ |
+| Per-layer Coverage Expectation met (domain 1:1 ACs; routes happy+edge+error) | ✅ (unit: use case delegation; Feature persist: ADR-002; HTTP: GET + POST happy + each validation error + unique including soft-deleted) |
+| Every test maps to a spec requirement - no unclaimed tests | ✅ (`UserSchemaTest` → USER-04 allowlist; 8-char tests → password edge; `email_verified_at` HTTP test → listed edge) |
+| Documented guidelines followed: `docs/tests.md` | ✅ |
 
-Notas: Action mínima (Validator + create). Sem rota HTTP (fora de escopo). Factory gera `remember_token` só quando o factory informa o campo; AC9 cobre o caller da Action sem o campo. Testes não reclamados: `UserSchemaTest` mapeia USER-04 / T1 (contrato da tabela via factory); `test_eight_character_password_is_accepted` mapeia o edge case de 8 caracteres.
+`StoreUserRequest` also applies `max:255` on name/email. That bound is not an AC. It does not change the spec outcomes above.
+
+`UserRepository::existsByEmail` is unused by `CreateUser` after T7. Unique is `Rule::unique` on the table. Leftover contract, not extra product scope.
 
 ---
 
 ## Edge Cases
 
-- [x] IF name, email ou password estiver ausente THEN rejeitar sem persistir — `CreateUserTest.php:68` + `CreateUserTest.php:71`
-- [x] IF email duplicado THEN rejeitar sem persistir registro adicional — `CreateUserTest.php:88` + `CreateUserTest.php:91`
-- [x] IF password tiver 7 caracteres THEN rejeitar; 8 caracteres válidos SHALL persistir — `CreateUserTest.php:105` (rejeita 7) e `CreateUserTest.php:58` (aceita 8)
-- [x] IF o input incluir `email_verified_at` THEN ignorar e persistir só colunas da tabela — payload em `CreateUserTest.php:24` com `email_verified_at`; restrição de colunas em `CreateUserTest.php:38`
+- [x] name, email ou password ausente no POST: rejeita sem persistir (`CreateUserHttpTest.php:52`, `:54`)
+- [x] email duplicado no POST: rejeita sem registro adicional (`CreateUserHttpTest.php:70`, `:72-73`)
+- [x] email de usuário soft-deleted: rejeita como duplicado (`CreateUserHttpTest.php:90`, `:92-93`)
+- [x] password com 7 caracteres rejeitada; 8 caracteres persiste (`CreateUserHttpTest.php:105`, `:107`; `:132-134`; `CreateUserPersistenceTest.php:60-61`)
+- [x] `email_verified_at` no input é ignorado; só colunas ADR-002 (`CreateUserHttpTest.php:148-152` name/email persistidos após campo extra; `CreateUserPersistenceTest.php:39-40` allowlist)
 
 ---
 
 ## Gate Check
 
-- **Gate command**: `php artisan test` (autor também usou `vendor/bin/pint --test` nos PHP alterados)
-- **Result line**: 11 passed, 0 failed, 0 skipped
-- **Pint**: passed nos arquivos da feature
-- **Test count before feature**: 2 (ExampleTest unit + feature)
-- **Test count after feature**: 11
-- **Delta**: +9 new tests
+- **Gate command**: `php artisan test && vendor/bin/pint --test app database/factories tests/Unit/User tests/Feature/User database/migrations/0001_01_01_000000_create_users_table.php`
+- **Result**: 17 passed, 0 failed, 0 skipped
+- **Assertions**: 87
+- **Test count before feature**: 9 (HEAD: 2 example + 6 old Feature `CreateUserTest` + 1 `UserSchemaTest`)
+- **Test count after feature**: 17
+- **Delta**: +8 new tests
 - **Skipped tests**: none
 - **Failures**: none
-- **Assertions**: 37
+- **Pint**: passed
+- **Deleted tests**: old `tests/Feature/User/CreateUserTest.php` (6 cases) replaced by Unit delegation + persist Feature + HTTP Feature. Coverage moved with T7/T8; not a silent deletion.
 
 ---
 
 ## Fix Plans (if issues found)
 
-Nenhum. Sem ACs descobertos, sem mutantes sobreviventes, sem gaps de precisão da spec.
+None. No surviving mutants. No AC gaps.
 
 ---
 
 ## Requirement Traceability Update
 
-Spec.md não foi editado. Status observado no relatório:
+`spec.md` was not edited (verifier is read-only except this report). Recorded here only.
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| USER-01 | Implementing | Verified |
-| USER-02 | Implementing | Verified |
-| USER-03 | Implementing | Verified |
-| USER-04 | Implementing | Verified |
-| USER-05 | Implementing | Verified |
-| USER-06 | Implementing | Verified |
-| USER-07 | Implementing | Verified |
-| USER-08 | Implementing | Verified |
-| USER-09 | Implementing | Verified |
+| USER-01 | Verified | ✅ Verified |
+| USER-02 | Verified | ✅ Verified |
+| USER-03 | Verified | ✅ Verified |
+| USER-04 | Verified | ✅ Verified |
+| USER-05 | Verified | ✅ Verified |
+| USER-06 | Verified | ✅ Verified |
+| USER-07 | Verified | ✅ Verified |
+| USER-08 | Verified | ✅ Verified |
+| USER-09 | Verified | ✅ Verified |
+| USER-10 | Verified | ✅ Verified |
+| USER-11 | Verified | ✅ Verified |
+| USER-12 | Verified | ✅ Verified |
+| USER-13 | Verified | ✅ Verified |
 
 ---
 
 ## Summary
 
-**Overall**: Ready
+**Overall**: ✅ Ready
 
-**Spec-anchored check**: 9/9 ACs matched spec outcome
+**Spec-anchored check**: 13/13 ACs matched spec outcome; 0 spec-precision gaps
 **Sensor**: 3/3 mutations killed
-**Gate**: 11 passed
+**Gate**: 17 passed, 0 failed
 
-**What works**: CreateUser persiste name/email/UUID/hash, rejeita campos ausentes, email inválido/duplicado e senha curta sem gravar linha extra, ignora `email_verified_at`, deixa `remember_token` nulo.
+**What works**: CreateUser persists ADR-002 columns, Argon2i password, UUID id, null `remember_token` and `deleted_at`. GET `/users/create` renders Inertia `User/Create`. POST `/users` persists name/email and redirects to `users.create`. Invalid input and duplicate email (active and soft-deleted) fail on the field key without an extra row. Validation lives in `StoreUserRequest`, not in the use case.
 
 **Issues found**: none
 
-**Next steps**: nenhuma correção; feature pronta no working tree.
+**Next steps**: none from this verifier pass
