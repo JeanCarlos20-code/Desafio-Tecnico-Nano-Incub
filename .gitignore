@@ -25,7 +25,9 @@ Homestead.yaml
 Thumbs.db
 .harness-manifest.json
 .venv
+.venv-harness
 __pycache__/
 *.pyc
 **/mcp.json
 **/project-harness.egg-info/
+/.local
