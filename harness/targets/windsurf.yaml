@@ -1,0 +1,14 @@
+id: windsurf
+display_name: Windsurf
+agent_mode: windsurf-workflow
+agent_dir: .windsurf/workflows
+skill_dirs:
+  - .windsurf/skills
+instruction_mode: windsurf-rule
+mcp:
+  mode: user-json
+  export_path: harness/generated/windsurf-mcp.json
+  home_path: ~/.codeium/windsurf/mcp_config.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${env:%s}"

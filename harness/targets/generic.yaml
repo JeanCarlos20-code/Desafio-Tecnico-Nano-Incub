@@ -1,0 +1,13 @@
+id: generic
+display_name: Generic Agent Skills
+agent_mode: skill
+agent_dir: .agents/skills
+skill_dirs:
+  - .agents/skills
+instruction_mode: agents-md
+mcp:
+  mode: export-json
+  export_path: harness/generated/generic-mcp.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"
