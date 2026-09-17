@@ -1,0 +1,13 @@
+<!--
+GENERATED FILE.
+Source: harness/instructions.md
+Run: ./harness/run sync
+Do not edit directly.
+-->
+
+---
+description: Uso obrigatório do Project Harness
+alwaysApply: true
+---
+
+Toda tarefa de código deve passar pelo Project Harness. Use o agente `harness` como orquestrador e não pule os gates humanos.
