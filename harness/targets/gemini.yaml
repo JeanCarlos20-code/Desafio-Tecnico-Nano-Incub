@@ -1,0 +1,13 @@
+id: gemini
+display_name: Gemini CLI
+agent_mode: skill
+agent_dir: .gemini/skills
+skill_dirs:
+  - .gemini/skills
+instruction_mode: gemini-import
+mcp:
+  mode: project-json
+  path: .gemini/settings.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"

@@ -1,0 +1,13 @@
+id: opencode
+display_name: OpenCode
+agent_mode: opencode
+agent_dir: .opencode/agents
+skill_dirs:
+  - .opencode/skills
+instruction_mode: agents-md
+mcp:
+  mode: project-json
+  path: opencode.json
+  style: opencode
+  root_key: mcp
+  env_syntax: "{env:%s}"

@@ -1,0 +1,13 @@
+id: jetbrains
+display_name: JetBrains AI Assistant
+agent_mode: jetbrains-rule
+agent_dir: .aiassistant/rules
+skill_dirs:
+  - .agents/skills
+instruction_mode: jetbrains-rule
+mcp:
+  mode: export-json
+  export_path: harness/generated/jetbrains-mcp.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"

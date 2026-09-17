@@ -1,0 +1,60 @@
+version: 1
+servers:
+  context7:
+    enabled: true
+    transport: http
+    url: https://mcp.context7.com/mcp
+    headers:
+      CONTEXT7_API_KEY:
+        env: CONTEXT7_API_KEY
+
+  github:
+    enabled: true
+    transport: http
+    url: https://api.githubcopilot.com/mcp/
+    headers:
+      Authorization:
+        env: GITHUB_MCP_TOKEN
+        prefix: "Bearer "
+      X-MCP-Toolsets: repos,pull_requests,issues
+      X-MCP-Readonly: "true"
+
+  postgres-app:
+    enabled: true
+    optional: true
+    optional_env: ARCHITECTURE_DATABASE_URL
+    transport: stdio
+    command: npx
+    args:
+      - -y
+      - "@microsoft/postgres-mcp"
+      - run
+      - --no-telemetry
+    read_only: true
+    environment:
+      PGSQL_MCP_CONNECTION_STRING:
+        env: ARCHITECTURE_DATABASE_URL
+      PGSQL_MCP_PROFILE_NAME: harness
+      PGSQL_MCP_DISABLE_CWD_ACCESS: "1"
+      PGSQL_MCP_QUERY_TIMEOUT_MS: "30000"
+
+  snyk:
+    enabled: true
+    optional: true
+    optional_env: SNYK_TOKEN
+    prefer_local: snyk
+    transport: stdio
+    command: npx
+    args:
+      - -y
+      - snyk@latest
+      - mcp
+      - -t
+      - stdio
+    local_args:
+      - mcp
+      - -t
+      - stdio
+    environment:
+      SNYK_TOKEN:
+        env: SNYK_TOKEN

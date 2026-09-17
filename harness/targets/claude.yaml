@@ -1,0 +1,13 @@
+id: claude
+display_name: Claude Code
+agent_mode: claude
+agent_dir: .claude/agents
+skill_dirs:
+  - .claude/skills
+instruction_mode: claude-import
+mcp:
+  mode: project-json
+  path: .mcp.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"
