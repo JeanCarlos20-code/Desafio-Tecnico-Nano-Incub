@@ -128,3 +128,39 @@ def test_apply_commit_plan_creates_two_commits(git_repo: Path, tmp_path: Path, m
     ]
     assert run(worktree, "git", "status", "--porcelain") == ""
     _ = branch
+
+
+def test_oversized_same_folder_is_chunked() -> None:
+    paths = tuple(f"harness/src/project_harness/mod_{index:02d}.py" for index in range(9))
+    groups = group_changed_paths(paths)
+    assert all(item.module == "harness" and item.kind == "code" for item in groups)
+    assert [len(item.paths) for item in groups] == [8, 1]
+    assert all(len(item.paths) <= 8 for item in groups)
+
+
+def test_oversized_module_splits_by_subdirectory() -> None:
+    paths = tuple(
+        [f"harness/src/project_harness/a_{index}.py" for index in range(5)]
+        + [f"harness/skills/foo/file_{index}.md" for index in range(5)]
+    )
+    groups = group_changed_paths(paths)
+    assert [(item.kind, item.module, item.area) for item in groups] == [
+        ("code", "harness", "harness/skills/foo"),
+        ("code", "harness", "harness/src/project_harness"),
+    ]
+    assert all(len(item.paths) <= 8 for item in groups)
+
+
+def test_match_requires_one_message_per_oversized_chunk() -> None:
+    paths = tuple(f"harness/src/project_harness/mod_{index:02d}.py" for index in range(9))
+    with pytest.raises(HarnessError, match="no máximo 8"):
+        match_commits(paths, ("chore(harness): add core runtime",))
+    prepared = match_commits(
+        paths,
+        (
+            "chore(harness): add core runtime",
+            "chore(harness): add remaining runtime modules",
+        ),
+    )
+    assert len(prepared) == 2
+    assert all(item.message.startswith("chore(harness):") for item in prepared)
