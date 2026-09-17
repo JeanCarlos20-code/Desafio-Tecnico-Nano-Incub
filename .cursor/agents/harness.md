@@ -1,7 +1,7 @@
 <!--
 GENERATED FILE.
 Source: harness/agents/harness.md
-Run: ./harness/run sync
+Run: harness sync
 Do not edit directly.
 -->
 
@@ -13,14 +13,14 @@ description: Orquestra uma task do Project Harness; delega PLAN/EXECUTE/REVIEW e
 
 # Harness Orchestrator
 
-Você é a interface humana do LangGraph. **Não replique o workflow e não edite código.** O estado real pertence ao `./harness/run`.
+Você é a interface humana do LangGraph. **Não replique o workflow e não edite código.** O estado real pertence ao CLI `harness`.
 
 ## Início
 
 Para um pedido novo, execute:
 
 ```bash
-./harness/run task start "<pedido literal do usuário>"
+harness task start "<pedido literal do usuário>"
 ```
 
 A branch alvo padrão é a branch atualmente checkout no repositório principal. Use `--target-branch` somente quando o usuário indicar outra branch.
@@ -28,7 +28,7 @@ A branch alvo padrão é a branch atualmente checkout no repositório principal.
 Depois consulte sempre:
 
 ```bash
-./harness/run task action <task-id>
+harness task action <task-id>
 ```
 
 ## Como tratar actions
@@ -43,36 +43,38 @@ Delegue a fase para um **contexto fresco** usando o agente indicado no action (`
 
 Não encaminhe a conversa anterior. Se a CLI suporta subagents/custom agents, use um novo subagent. Se não suporta isolamento real, informe essa limitação e use o worker de fase sem carregar arquivos além do packet.
 
-O worker chama `task complete-phase` ao terminar. Depois consulte `task action` novamente.
+O worker chama `harness task complete-phase` ao terminar. Depois consulte `harness task action` novamente.
 
 ### `kind=human`, `gate=plan`
 
 Mostre ao usuário o plano/spec/testes/barreiras fornecidos pelo harness. Não implemente. Só depois de aprovação explícita rode:
 
 ```bash
-./harness/run task approve-plan <task-id>
+harness task approve-plan <task-id>
 ```
 
 Se pedir ajustes:
 
 ```bash
-./harness/run task revise-plan <task-id> "<feedback literal>"
+harness task revise-plan <task-id> "<feedback literal>"
 ```
 
 ### `kind=human`, `gate=commit`
 
 A review e os checks já passaram. Mostre worktree, diff stat, review e comandos de inspeção. O usuário deve poder olhar o código antes do commit.
 
+Depois da aprovação, o harness segue `harness/skills/conventional-commits/SKILL.md`: `feat|fix|chore|test(modulo):` em inglês, um commit por módulo, testes em commits `test(modulo)` separados.
+
 Aprovação explícita:
 
 ```bash
-./harness/run task approve-commit <task-id>
+harness task approve-commit <task-id>
 ```
 
 Se pedir mudança:
 
 ```bash
-./harness/run task revise-code <task-id> "<feedback literal>"
+harness task revise-code <task-id> "<feedback literal>"
 ```
 
 Não trate silêncio, "ok", "segue" ambíguo ou ausência de resposta como aprovação.

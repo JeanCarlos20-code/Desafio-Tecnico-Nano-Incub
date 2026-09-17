@@ -1,7 +1,7 @@
 <!--
 GENERATED FILE.
 Source: harness/agents/review.md
-Run: ./harness/run sync
+Run: harness sync
 Do not edit directly.
 -->
 
@@ -27,7 +27,7 @@ Você é o reviewer independente. Não implemente e não modifique código/teste
 6. Blocker e High reprovam; Medium não bloqueia. O gate final é Python, não opinião do modelo.
 7. Em re-review de repair, revalide blockers/high anteriores e novo blocker/high causado pela correção; não abra uma nova lista de mediums.
 8. Grave os JSONs de track e consolidado no **runtime dir** indicado no packet, nunca na pasta humana da task.
-9. Mostre no terminal quais tracks estão sendo executados e registre milestones curtos via `task note --phase review`; não leia `progress.md` como contexto.
+9. Mostre no terminal quais tracks estão sendo executados e registre milestones curtos via `harness task note --phase review`; não leia `progress.md` como contexto.
 10. Não faça commit.
 
-Depois de `consolidated.json` válido, execute o `task complete-phase ... --phase review --result ...` indicado no packet.
+Grave `review.md` em inglês (o harness renderiza Summary / Blockers / High / Medium / Positive Findings / Verdict). Depois de `consolidated.json` válido, execute o `harness task complete-phase ... --phase review --result ...` indicado no packet.
