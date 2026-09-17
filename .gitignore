@@ -25,4 +25,6 @@ Homestead.yaml
 Thumbs.db
 .harness-manifest.json
 .venv
+__pycache__/
+*.pyc
 /harness
