@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
@@ -12,6 +13,11 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    test: {
+        environment: 'jsdom',
+        passWithNoTests: true,
+        include: ['resources/js/**/*.test.{js,jsx}'],
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],

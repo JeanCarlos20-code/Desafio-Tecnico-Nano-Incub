@@ -4,8 +4,10 @@ namespace App\Modules\User\Infra\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\User\Application\UseCases\CreateUser;
+use App\Modules\User\Infra\Database\Models\User as UserModel;
 use App\Modules\User\Infra\Http\Requests\StoreUserRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,8 +22,10 @@ class UserController extends Controller
     {
         $data = $request->validated();
 
-        $createUser->execute($data['name'], $data['email'], $data['password']);
+        $created = $createUser->execute($data['name'], $data['email'], $data['password']);
 
-        return redirect()->route('users.create');
+        Auth::login(UserModel::findOrFail($created->id));
+
+        return redirect()->route('reservations.index');
     }
 }
