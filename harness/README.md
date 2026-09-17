@@ -105,7 +105,9 @@ worktree: ~/.cache/project-harness/worktrees/<repo>/0001-implementar-criacao-de-
 ├── tasks.md
 ├── progress.md
 ├── validation.md
-└── review.md
+└── review/
+    ├── review-01.md
+    └── review-02.md   # rodadas seguintes; nunca sobrescreve a anterior
 ```
 
 `progress.md` é observabilidade humana e **não entra automaticamente no contexto dos modelos**. Workers registram apenas milestones curtos; isso não é cadeia de pensamento e não é relido nas fases seguintes.
@@ -227,7 +229,7 @@ tests
 
 Architecture é **review de boundaries/camadas**, não um architecture agent.
 
-Saída humana em `review.md`:
+Saída humana em `review/review-NN.md` (histórico append-only; o Execute/Repair usa só a última, com o veredito e o `consolidated.json` daquela rodada):
 
 ```text
 🤖 AI Code Review (S)

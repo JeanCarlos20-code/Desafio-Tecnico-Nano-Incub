@@ -267,12 +267,16 @@ class HarnessGraph:
         failed = tuple(item for item in checks if item.required and not item.passed)
         blocking = tuple(state.get("blocking_ids", []))
         feedback = state.get("code_feedback", "")
+        task_dir = self._task_dir(state)
         packet = self.packets.execute(
             meta,
             repair=True,
             feedback=feedback,
             blocking_ids=blocking,
             failed_checks=failed,
+            latest_review=self.artifacts.latest_review_path(task_dir),
+            latest_verdict=as_str(state.get("review_verdict")),
+            latest_result=as_str(state.get("review_report_path")),
         )
         self._agent_interrupt(meta, "repair", packet)
         self.artifacts.append_progress(
@@ -344,14 +348,14 @@ class HarnessGraph:
         review = self.reviews.load(report_path)
         checks_green = self.checks.required_passed(checks)
         task_dir = self._task_dir(state)
-        (task_dir / "review.md").write_text(
+        written = self.artifacts.write_review(
+            task_dir,
             self.reviews.render_markdown(review, checks_green),
-            encoding="utf-8",
         )
         self.artifacts.append_progress(
             task_dir,
             f"review-{next_round}",
-            f"Review round {next_round}: {review.verdict.value}; blockers/high: {len(review.blocking_ids)}.",
+            f"Review round {next_round} wrote {written.name}: {review.verdict.value}; blockers/high: {len(review.blocking_ids)}.",
         )
         return {
             "phase": "review_gate",
@@ -415,7 +419,7 @@ class HarnessGraph:
             "commit_message": state.get("commit_message", ""),
             "commit_skill": "harness/skills/conventional-commits/SKILL.md",
             "diff_stat": self.git.diff_stat(meta.worktree_path),
-            "review_file": str(task_dir / "review.md"),
+            "review_file": str(self.artifacts.latest_review_path(task_dir) or self.artifacts.reviews_dir(task_dir)),
             "validation_file": str(task_dir / "validation.md"),
             "check_summary": self.checks.render(checks),
             "inspect_commands": [

@@ -94,7 +94,9 @@ TEMPLATES = {
 
 ## Final Status
 """,
-    "review.md": """🤖 AI Code Review (S)
+}
+
+REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 
 ## Summary
 
@@ -107,8 +109,9 @@ TEMPLATES = {
 ## Positive Findings
 
 ## Verdict
-""",
-}
+"""
+REVIEW_DIRNAME = "review"
+REVIEW_FILE_RE = re.compile(r"^review-(\d{2,})\.md$")
 
 
 class ArtifactService:
@@ -123,6 +126,7 @@ class ArtifactService:
     def prepare(self, worktree: Path, relative: Path, request: str, task_id: str) -> Path:
         directory = self.task_dir(worktree, relative)
         directory.mkdir(parents=True, exist_ok=True)
+        (directory / REVIEW_DIRNAME).mkdir(parents=True, exist_ok=True)
         for name in self.NAMES:
             path = directory / name
             if path.exists():
@@ -132,6 +136,39 @@ class ArtifactService:
                 body = body.rstrip() + f"\n\n- Task created for: {request}\n"
             path.write_text(body, encoding="utf-8")
         return directory
+
+    def reviews_dir(self, task_dir: Path) -> Path:
+        return task_dir / REVIEW_DIRNAME
+
+    def list_reviews(self, task_dir: Path) -> tuple[Path, ...]:
+        directory = self.reviews_dir(task_dir)
+        if not directory.is_dir():
+            return ()
+        found: list[tuple[int, Path]] = []
+        for path in directory.iterdir():
+            match = REVIEW_FILE_RE.match(path.name)
+            if match and path.is_file():
+                found.append((int(match.group(1)), path))
+        found.sort(key=lambda item: item[0])
+        return tuple(item[1] for item in found)
+
+    def latest_review_path(self, task_dir: Path) -> Path | None:
+        reviews = self.list_reviews(task_dir)
+        return reviews[-1] if reviews else None
+
+    def write_review(self, task_dir: Path, markdown: str) -> Path:
+        directory = self.reviews_dir(task_dir)
+        directory.mkdir(parents=True, exist_ok=True)
+        existing = self.list_reviews(task_dir)
+        number = 1
+        if existing:
+            match = REVIEW_FILE_RE.match(existing[-1].name)
+            number = (int(match.group(1)) if match else len(existing)) + 1
+        path = directory / f"review-{number:02d}.md"
+        if path.exists():
+            raise HarnessError(f"Review já existe e não pode ser substituída: {path.name}")
+        path.write_text(markdown, encoding="utf-8")
+        return path
 
     def append_progress(self, task_dir: Path, event_id: str, message: str) -> None:
         path = task_dir / "progress.md"
