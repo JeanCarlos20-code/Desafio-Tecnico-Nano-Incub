@@ -16,9 +16,9 @@ EXECUTE worker (fresh context)
        ↓
 CHECKS
        ↓
-REVIEW worker (fresh context, 4 tracks)
+REVIEW worker (fresh context, 4 tracks) → grava `review/review-NN.md` (não substitui rodadas anteriores)
        ↓
-Gate = checks green AND no blocker/high?
+Gate = checks green AND no blocker/high da **última** review?
   ├─ no → REPAIR worker (fresh context) → CHECKS → REVIEW
   │        max 3 then HITL escalation
   └─ yes

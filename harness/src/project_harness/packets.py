@@ -66,7 +66,7 @@ Use SPECIFY + TASKS. DESIGN não é obrigatório neste MVP; só use conceitos de
 
 ## Artefatos em `.specs/` (inglês)
 
-Os arquivos da pasta da task (`context.md`, `spec.md`, `tasks.md`, `progress.md`, `validation.md`, `review.md`) devem ser escritos em **inglês**, com estes headings. Não traduza identificadores de código. Texto fornecido pelo usuário pode permanecer no idioma original.
+Os arquivos da pasta da task (`context.md`, `spec.md`, `tasks.md`, `progress.md`, `validation.md`, `review/review-NN.md`) devem ser escritos em **inglês**, com estes headings. Não traduza identificadores de código. Texto fornecido pelo usuário pode permanecer no idioma original.
 
 ### `{task_dir / 'context.md'}`
 
@@ -144,7 +144,18 @@ Não implemente código. Quando os três artefatos estiverem prontos:
         )
         return path
 
-    def execute(self, meta: TaskMeta, *, repair: bool, feedback: str, blocking_ids: tuple[str, ...], failed_checks: tuple[CheckResult, ...]) -> Path:
+    def execute(
+        self,
+        meta: TaskMeta,
+        *,
+        repair: bool,
+        feedback: str,
+        blocking_ids: tuple[str, ...],
+        failed_checks: tuple[CheckResult, ...],
+        latest_review: Path | None = None,
+        latest_verdict: str = "",
+        latest_result: str = "",
+    ) -> Path:
         directory = self.store.packet_dir(meta.task_id)
         name = "repair.md" if repair else "execute.md"
         path = directory / name
@@ -159,7 +170,18 @@ Não implemente código. Quando os três artefatos estiverem prontos:
             f"""
 ## Repair scope
 
-Corrija SOMENTE os blockers/high anteriores, os checks obrigatórios vermelhos e o feedback humano abaixo. Não refaça a investigação ampla do Planner.
+Corrija SOMENTE os blockers/high da **última** review, os checks obrigatórios vermelhos e o feedback humano abaixo. Não refaça a investigação ampla do Planner.
+
+## Latest review (authoritative)
+
+O histórico humano fica em `{task_dir / 'review'}` como `review-01.md`, `review-02.md`, ... Nunca substitua um arquivo anterior.
+
+Use somente esta rodada:
+- Human report: `{latest_review if latest_review is not None else '(ausente)'}`
+- Verdict: `{latest_verdict.strip() or '(ausente)'}`
+- Result JSON: `{latest_result.strip() or '(ausente)'}`
+
+Não leve findings de um `review-NN.md` mais antigo. Leia o relatório acima e, quando necessário, os arquivos dos findings. Em repair, não abra novas frentes medium.
 
 Blocking IDs:
 {findings}
@@ -169,12 +191,18 @@ Failed checks:
 
 Feedback humano:
 {feedback.strip() or '(nenhum)'}
-
-Leia o `review.md` e, quando necessário, os arquivos diretamente associados aos findings. Em repair, não abra novas frentes medium.
 """
             if repair
             else ""
         )
+        latest_line = ""
+        if repair:
+            latest_line = (
+                f"- `{latest_review}` — última review; veredito `{latest_verdict.strip() or '(ausente)'}`; "
+                f"resultado `{latest_result.strip() or '(ausente)'}`\n"
+                if latest_review is not None
+                else "- última review: (ausente)\n"
+            )
         path.write_text(
             f"""# Harness Phase Packet — {mode}
 
@@ -187,7 +215,7 @@ Comece SOMENTE por:
 - `{task_dir / 'context.md'}`
 - `{task_dir / 'spec.md'}`
 - `{task_dir / 'tasks.md'}`
-
+{latest_line}
 A investigação ampla do Planner não atravessa esta fase. Use esses documentos como memória comprimida. Leia código inicialmente pelos arquivos/símbolos citados neles. Abra dependências adicionais apenas quando uma dependência concreta exigir.
 
 **Não leia `progress.md` como contexto.** Ele é observabilidade humana.
@@ -254,7 +282,7 @@ Comece por:
 
 Não herde conversa do Executor. Leia arquivos alterados e contexto adjacente apenas para verificar evidência.
 
-O harness renderiza `review.md` em inglês com Summary, Blockers, High, Medium, Positive Findings e Verdict.
+O harness grava cada rodada em `{task_dir / 'review' / 'review-NN.md'}` (append-only; nunca substitui `review-01.md`, `review-02.md`, ...). O markdown humano usa Summary, Blockers, High, Medium, Positive Findings e Verdict.
 
 ## Checks determinísticos
 
