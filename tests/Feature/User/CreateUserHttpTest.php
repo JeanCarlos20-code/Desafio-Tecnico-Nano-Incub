@@ -19,11 +19,40 @@ class CreateUserHttpTest extends TestCase
         $this->withoutVite();
     }
 
+    public function test_register_page_renders_inertia_user_create(): void
+    {
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('User/Create'));
+    }
+
     public function test_create_page_renders_inertia_user_create(): void
     {
         $this->get(route('users.create'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('User/Create'));
+    }
+
+    public function test_register_persists_authenticates_and_redirects_to_reservations(): void
+    {
+        $this->from(route('register'))
+            ->post(route('register.store'), [
+                'name' => 'Ada Lovelace',
+                'email' => 'ada@example.com',
+                'password' => 'secret123',
+            ])
+            ->assertRedirect(route('reservations.index'));
+
+        $this->assertAuthenticated();
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseHas('users', [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+        ]);
+
+        $this->get(route('reservations.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Reservation/Index'));
     }
 
     public function test_store_persists_user_and_redirects(): void
@@ -34,8 +63,9 @@ class CreateUserHttpTest extends TestCase
                 'email' => 'ada@example.com',
                 'password' => 'secret123',
             ])
-            ->assertRedirect(route('users.create'));
+            ->assertRedirect(route('reservations.index'));
 
+        $this->assertAuthenticated();
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseHas('users', [
             'name' => 'Ada Lovelace',
@@ -44,12 +74,12 @@ class CreateUserHttpTest extends TestCase
     }
 
     #[DataProvider('missingRequiredFields')]
-    public function test_store_rejects_missing_required_fields(string $field, array $payload): void
+    public function test_store_rejects_missing_required_fields(string $field, array $payload, string $message): void
     {
         $this->from(route('users.create'))
             ->post(route('users.store'), $payload)
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors($field);
+            ->assertSessionHasErrors([$field => $message]);
 
         $this->assertDatabaseCount('users', 0);
     }
@@ -67,7 +97,7 @@ class CreateUserHttpTest extends TestCase
                 'password' => 'secret123',
             ])
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors(['email' => 'Este e-mail já está cadastrado.']);
 
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseMissing('users', ['name' => 'Ada Two']);
@@ -87,7 +117,7 @@ class CreateUserHttpTest extends TestCase
                 'password' => 'secret123',
             ])
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors(['email' => 'Este e-mail já está cadastrado.']);
 
         $this->assertSame(1, UserModel::withTrashed()->count());
         $this->assertDatabaseMissing('users', ['name' => 'Ada Two']);
@@ -102,7 +132,7 @@ class CreateUserHttpTest extends TestCase
                 'password' => '1234567',
             ])
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors('password');
+            ->assertSessionHasErrors(['password' => 'A senha deve possuir pelo menos 8 caracteres.']);
 
         $this->assertDatabaseCount('users', 0);
     }
@@ -116,7 +146,7 @@ class CreateUserHttpTest extends TestCase
                 'password' => 'secret123',
             ])
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors(['email' => 'Informe um endereço de e-mail válido.']);
 
         $this->assertDatabaseCount('users', 0);
     }
@@ -129,8 +159,9 @@ class CreateUserHttpTest extends TestCase
                 'email' => 'grace@example.com',
                 'password' => '12345678',
             ])
-            ->assertRedirect(route('users.create'));
+            ->assertRedirect(route('reservations.index'));
 
+        $this->assertAuthenticated();
         $this->assertDatabaseCount('users', 1);
     }
 
@@ -143,7 +174,7 @@ class CreateUserHttpTest extends TestCase
                 'password' => 'secret123',
                 'email_verified_at' => '2026-01-01 00:00:00',
             ])
-            ->assertRedirect(route('users.create'));
+            ->assertRedirect(route('reservations.index'));
 
         $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseHas('users', [
@@ -152,8 +183,42 @@ class CreateUserHttpTest extends TestCase
         ]);
     }
 
+    public function test_register_persists_email_trimmed_and_lowercased(): void
+    {
+        $this->from(route('register'))
+            ->post(route('register.store'), [
+                'name' => 'Ada Lovelace',
+                'email' => ' Ada@Example.com ',
+                'password' => 'secret123',
+            ])
+            ->assertRedirect(route('reservations.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'ada@example.com',
+        ]);
+    }
+
+    public function test_store_does_not_flash_or_return_the_raw_password(): void
+    {
+        $secret = 'super-secret-password';
+
+        $response = $this->from(route('register'))
+            ->post(route('register.store'), [
+                'name' => 'Ada Lovelace',
+                'email' => 'not-an-email',
+                'password' => $secret,
+            ]);
+
+        $response
+            ->assertRedirect(route('register'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertArrayNotHasKey('password', session()->get('_old_input', []));
+        $this->assertStringNotContainsString($secret, $response->getContent());
+    }
+
     /**
-     * @return array<string, array{0: string, 1: array<string, string>}>
+     * @return array<string, array{0: string, 1: array<string, string>, 2: string}>
      */
     public static function missingRequiredFields(): array
     {
@@ -161,15 +226,15 @@ class CreateUserHttpTest extends TestCase
             'missing name' => ['name', [
                 'email' => 'ada@example.com',
                 'password' => 'secret123',
-            ]],
+            ], 'Informe seu nome.'],
             'missing email' => ['email', [
                 'name' => 'Ada Lovelace',
                 'password' => 'secret123',
-            ]],
+            ], 'Informe um endereço de e-mail válido.'],
             'missing password' => ['password', [
                 'name' => 'Ada Lovelace',
                 'email' => 'ada@example.com',
-            ]],
+            ], 'A senha deve possuir pelo menos 8 caracteres.'],
         ];
     }
 }
