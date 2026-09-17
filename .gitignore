@@ -29,5 +29,5 @@ Thumbs.db
 __pycache__/
 *.pyc
 **/mcp.json
-**/project-harness.egg-info/
+*.egg-info/
 /.local
