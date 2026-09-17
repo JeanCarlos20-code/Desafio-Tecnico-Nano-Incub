@@ -94,8 +94,11 @@ def match_commits(paths: tuple[str, ...], messages: tuple[str, ...]) -> tuple[Pr
             break
         if match_index is None:
             raise HarnessError(
-                f"tasks.md não tem commit para {group.kind}({group.module}). "
-                "Separe por módulo e testes conforme harness/skills/conventional-commits."
+                f"tasks.md não tem commit para {group.kind}({group.module})"
+                + (f" em {group.area}" if getattr(group, "area", "") else "")
+                + f" ({len(group.paths)} arquivos). "
+                "Separe por módulo, testes e blocos de no máximo 8 arquivos "
+                "conforme harness/skills/conventional-commits."
             )
         message = unused.pop(match_index)
         prepared.append(PreparedCommit(message=message, paths=group.paths))
