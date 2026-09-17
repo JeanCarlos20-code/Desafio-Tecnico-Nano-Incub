@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Group dirty paths into one commit per module, tests separate from production."""
+"""Group dirty paths into atomic commits: module, tests separate, no oversized blocks."""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ TEST_PREFIXES = ("tests/", "harness/tests/")
 TEST_SUFFIXES = (".test.js", ".test.ts", ".test.jsx", ".test.tsx", ".spec.ts", ".spec.js")
 META_PREFIXES = ("docs/", ".specs/", ".cursor/")
 META_ROOT_FILES = {".gitignore", "README.md", "LICENSE", "LICENSE.txt"}
+MAX_PATHS_PER_COMMIT = 8
+LAYER_DIRS = {"domain", "application", "infra", "http", "database", "unit", "feature"}
 
 
 @dataclass(frozen=True)
@@ -20,6 +22,7 @@ class ChangeGroup:
     module: str
     kind: str
     paths: tuple[str, ...]
+    area: str = ""
 
 
 def is_test_path(path: str) -> bool:
@@ -39,9 +42,6 @@ def is_meta_path(path: str) -> bool:
     if normalized in META_ROOT_FILES:
         return True
     return any(normalized.startswith(prefix) for prefix in META_PREFIXES)
-
-
-LAYER_DIRS = {"domain", "application", "infra", "http", "database", "unit", "feature"}
 
 
 def module_of(path: str) -> str:
@@ -84,6 +84,47 @@ def kind_of(path: str) -> str:
     return "code"
 
 
+def _posix_parts(path: str) -> tuple[str, ...]:
+    return Path(path.replace("\\", "/")).parts
+
+
+def _common_area(paths: tuple[str, ...]) -> str:
+    if not paths:
+        return ""
+    parts_list = [_posix_parts(item) for item in paths]
+    common: list[str] = []
+    for index, piece in enumerate(parts_list[0]):
+        if all(len(item) > index and item[index] == piece for item in parts_list):
+            common.append(piece)
+        else:
+            break
+    return "/".join(common)
+
+
+def _chunk(paths: list[str], size: int) -> list[tuple[str, ...]]:
+    ordered = sorted(paths)
+    return [tuple(ordered[index : index + size]) for index in range(0, len(ordered), size)]
+
+
+def split_oversized(paths: list[str], depth: int = 0) -> list[tuple[str, ...]]:
+    ordered = sorted({item.replace("\\", "/") for item in paths if item.strip()})
+    if len(ordered) <= MAX_PATHS_PER_COMMIT:
+        return [tuple(ordered)]
+    buckets: dict[str, list[str]] = {}
+    for path in ordered:
+        parts = _posix_parts(path)
+        key = "/".join(parts[: depth + 1]) if len(parts) > depth else path
+        buckets.setdefault(key, []).append(path)
+    if all(len(_posix_parts(path)) <= depth + 1 for path in ordered):
+        return _chunk(ordered, MAX_PATHS_PER_COMMIT)
+    if len(buckets) == 1:
+        return split_oversized(ordered, depth + 1)
+    result: list[tuple[str, ...]] = []
+    for key in sorted(buckets):
+        result.extend(split_oversized(buckets[key], depth + 1))
+    return result
+
+
 def group_paths(paths: tuple[str, ...] | list[str]) -> tuple[ChangeGroup, ...]:
     buckets: dict[tuple[str, str], list[str]] = {}
     for raw in paths:
@@ -96,13 +137,26 @@ def group_paths(paths: tuple[str, ...] | list[str]) -> tuple[ChangeGroup, ...]:
     ordered = sorted(buckets.items(), key=lambda item: (kind_order.get(item[0][0], 9), item[0][1]))
     groups: list[ChangeGroup] = []
     for (kind, module), group_paths_list in ordered:
-        groups.append(ChangeGroup(module=module, kind=kind, paths=tuple(group_paths_list)))
+        for chunk in split_oversized(group_paths_list):
+            groups.append(
+                ChangeGroup(
+                    module=module,
+                    kind=kind,
+                    paths=chunk,
+                    area=_common_area(chunk),
+                )
+            )
     return tuple(groups)
 
 
 def groups_as_json(groups: tuple[ChangeGroup, ...]) -> str:
     payload = [
-        {"module": group.module, "kind": group.kind, "paths": list(group.paths)}
+        {
+            "module": group.module,
+            "kind": group.kind,
+            "area": group.area,
+            "paths": list(group.paths),
+        }
         for group in groups
     ]
     return json.dumps(payload, indent=2, ensure_ascii=True) + "\n"
@@ -116,7 +170,6 @@ def main(argv: list[str] | None = None) -> int:
     paths = tuple(args.paths)
     if not paths:
         root = Path(args.root)
-        # Caller should pass --path; empty means no groups.
         _ = root
     print(groups_as_json(group_paths(paths)), end="")
     return 0
