@@ -153,6 +153,8 @@ def test_full_graph_plan_execute_review_commit_merge(tmp_path: Path, harness_sou
                 "result": str(consolidated),
             },
         )
+        assert (task_dir / "review" / "review-01.md").is_file()
+        assert not (task_dir / "review.md").exists()
         action = store.read_action(task_id)
         assert action is not None and action.get("gate") == "commit"
 

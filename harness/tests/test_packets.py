@@ -133,6 +133,50 @@ def test_plan_packet_includes_compact_stack_summary(git_repo: Path) -> None:
     assert "Pedido do usuário" in text
 
 
+def test_repair_packet_points_at_latest_review_verdict_and_result(git_repo: Path) -> None:
+    harness_dir = git_repo / "harness"
+    harness_dir.mkdir()
+    (harness_dir / "config.yaml").write_text(MIN_CONFIG, encoding="utf-8")
+    (harness_dir / "stack.yml").write_text(STACK_YAML, encoding="utf-8")
+    config = load_config(git_repo)
+    store = TaskStore(git_repo, config)
+    packets = PacketService(git_repo, store, ContextService(git_repo, config))
+    meta = TaskMeta(
+        task_id="0009",
+        slug="add-widget",
+        request="add widget",
+        target_branch="feature/challenge",
+        base_commit="abc",
+        task_branch="harness/0009-add-widget",
+        worktree_path=git_repo,
+        task_dir_relative=Path(".specs/tasks/0009-add-widget"),
+        thread_id="thread-packets",
+    )
+    history = git_repo / meta.task_dir_relative / "review"
+    history.mkdir(parents=True)
+    first = history / "review-01.md"
+    latest = history / "review-02.md"
+    first.write_text("old REJECTED\n", encoding="utf-8")
+    latest.write_text("new APPROVED\n", encoding="utf-8")
+    result = git_repo / "consolidated-round-2.json"
+    result.write_text("{}", encoding="utf-8")
+    text = packets.execute(
+        meta,
+        repair=True,
+        feedback="fix the blocker",
+        blocking_ids=("ARCH-001",),
+        failed_checks=(),
+        latest_review=latest,
+        latest_verdict="REJECTED",
+        latest_result=str(result),
+    ).read_text(encoding="utf-8")
+    assert str(latest) in text
+    assert "REJECTED" in text
+    assert str(result) in text
+    assert "`review.md`" not in text
+    assert "última review" in text
+
+
 def test_plan_loads_stack_from_primary_when_worktree_lacks_gitignored_catalog(
     git_repo: Path, tmp_path: Path, monkeypatch
 ) -> None:

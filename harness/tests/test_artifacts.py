@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from project_harness.artifacts import ArtifactService, TEMPLATES
+from project_harness.artifacts import ArtifactService, REVIEW_TEMPLATE, TEMPLATES
 from project_harness.config import load_config
 from project_harness.errors import HarnessError
 
@@ -38,7 +38,7 @@ def test_templates_use_english_headings() -> None:
     assert "## Acceptance Criteria" in TEMPLATES["spec.md"]
     assert "## Planned Tests" in TEMPLATES["tasks.md"]
     assert "## Required Gates" in TEMPLATES["tasks.md"]
-    assert "## Verdict" in TEMPLATES["review.md"]
+    assert "## Verdict" in REVIEW_TEMPLATE
 
 
 def test_prepare_writes_english_templates(harness_source: Path, tmp_path: Path) -> None:
@@ -50,6 +50,24 @@ def test_prepare_writes_english_templates(harness_source: Path, tmp_path: Path) 
     assert "## História" not in spec
     progress = (task / "progress.md").read_text(encoding="utf-8")
     assert "Task created for:" in progress
+    assert (task / "review").is_dir()
+    assert not (task / "review.md").exists()
+
+
+def test_write_review_appends_history_without_replacing(harness_source: Path, tmp_path: Path) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = service.prepare(tmp_path, Path("task"), "add login", "0001")
+    first = service.write_review(task, "round one REJECTED\n")
+    second = service.write_review(task, "round two APPROVED\n")
+    assert first.name == "review-01.md"
+    assert second.name == "review-02.md"
+    assert first.read_text(encoding="utf-8") == "round one REJECTED\n"
+    assert second.read_text(encoding="utf-8") == "round two APPROVED\n"
+    assert service.latest_review_path(task) == second
+    service.prepare(tmp_path, Path("task"), "add login", "0001")
+    assert first.read_text(encoding="utf-8") == "round one REJECTED\n"
+    assert not (task / "review.md").exists()
 
 
 def test_plan_validation(harness_source: Path, tmp_path: Path) -> None:
