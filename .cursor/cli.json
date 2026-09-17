@@ -1,11 +1,9 @@
 {
     "permissions": {
         "allow": [
-            "Write(/home/jeansouza/.cache/project-harness/worktrees/**)",
             "Read(/home/jeansouza/.cache/project-harness/worktrees/**)",
-            "Shell(git)",
-            "Shell(python)",
-            "Shell(python3)"
+            "Write(/home/jeansouza/.cache/project-harness/worktrees/**)",
+            "Shell(git)"
         ],
         "deny": []
     }

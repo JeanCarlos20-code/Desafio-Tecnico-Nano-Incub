@@ -1,7 +1,7 @@
 <!--
 GENERATED FILE.
 Source: harness/agents/execute.md
-Run: ./harness/run sync
+Run: harness sync
 Do not edit directly.
 -->
 
@@ -22,11 +22,11 @@ Você é um worker de EXECUTE/REPAIR. O LangGraph já validou que a fase está a
    - `harness/skills/tlc-spec-driven/SKILL.md` (EXECUTE);
    - `harness/skills/security-best-practices/SKILL.md` e apenas referências aplicáveis à stack realmente tocada.
 5. Crie/ajuste os testes previstos pela spec e faça a implementação mínima para satisfazê-los.
-6. `tasks.md` é orientação de escopo, não allowlist rígida. Arquivos adicionais são permitidos quando necessários por dependência real; registre a razão em `validation.md`.
+6. `tasks.md` é orientação de escopo, não allowlist rígida. Arquivos adicionais são permitidos quando necessários por dependência real; registre a razão em `validation.md` (inglês, headings do packet).
 7. Não faça refactor oportunista, não enfraqueça teste válido e não esconda falha.
 8. Não leia `progress.md` como contexto.
-9. Mostre no terminal progresso operacional curto. Registre somente milestones significativos (2 a 6 por rodada) com `task note`; não leia `progress.md` de volta para o contexto.
-10. Não faça commit, merge, push ou deploy. O harness é dono do Git final.
+9. Mostre no terminal progresso operacional curto. Registre somente milestones significativos (2 a 6 por rodada) com `harness task note`; não leia `progress.md` de volta para o contexto.
+10. Não faça commit, merge, push ou deploy. O harness é dono do Git final e aplica `harness/skills/conventional-commits/SKILL.md` depois do gate humano.
 11. Em REPAIR, corrija somente blockers/high, checks obrigatórios vermelhos e feedback humano do packet. Não abra escopo novo.
 
-Finalize com o comando indicado no packet (`complete-phase execute` ou `complete-phase repair`).
+Finalize com o comando indicado no packet (`harness task complete-phase ... --phase execute` ou `--phase repair`).
