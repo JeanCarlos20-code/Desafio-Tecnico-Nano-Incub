@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HarnessReviewReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["track", "summary", "findings"],
+  "properties": {
+    "track": {
+      "type": "string",
+      "enum": ["architecture", "security", "smells", "tests", "consolidated"]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "verdict": {
+      "type": ["string", "null"],
+      "enum": ["APPROVED", "REJECTED", null]
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "unverified": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "positives": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "execute_handoff": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["action", "blocking_ids"],
+      "properties": {
+        "action": { "type": "string", "enum": ["complete", "repair"] },
+        "blocking_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "instructions": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "track": { "const": "consolidated" } } },
+      "then": {
+        "required": ["verdict", "execute_handoff"]
+      }
+    }
+  ],
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "track",
+        "severity",
+        "path",
+        "problem",
+        "impact",
+        "fix",
+        "evidence"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z]+-[0-9]{3}$" },
+        "track": {
+          "type": "string",
+          "enum": ["architecture", "security", "smells", "tests"]
+        },
+        "severity": { "type": "string", "enum": ["blocker", "high", "medium"] },
+        "path": { "type": "string", "minLength": 1 },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "source_doc": { "type": "string" },
+        "problem": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 },
+        "fix": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "ref"],
+            "properties": {
+              "type": { "type": "string", "enum": ["internal", "external"] },
+              "ref": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
