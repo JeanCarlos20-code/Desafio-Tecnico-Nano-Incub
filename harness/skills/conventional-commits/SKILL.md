@@ -1,6 +1,6 @@
 ---
 name: conventional-commits
-description: "Creates atomic GitHub Conventional Commits as type(module): English message. Types are feat, fix, chore, and test. Splits production and tests into separate commits per module. Use before any git commit in this repo, including the harness commit node, plan frontmatter, and when the user asks to commit."
+description: "Creates atomic GitHub Conventional Commits as type(module): English message. Types are feat, fix, chore, and test. Splits production and tests per module, and splits oversized file blocks. Use before any git commit in this repo, including the harness commit node, plan frontmatter, and when the user asks to commit."
 ---
 
 # Conventional Commits
@@ -40,9 +40,14 @@ Never mix:
 
 - two modules in one commit;
 - production and tests in one commit;
-- harness/docs/specs with product code.
+- harness/docs/specs with product code;
+- more than **8 files** in one commit.
 
-Order: production for a module, then `test` for that module, then `chore` for docs/specs/cursor/harness leftovers.
+If one module still has many files after the rules above, **split that module too**. Prefer grouping by subdirectory (`harness/src`, `harness/skills`, `app/Modules/User/Domain`, …). If files sit in the same folder, chunk them in batches of 8. Keep the same `type(module):` scope; write a distinct English message per chunk (`group_commits.py` reports `area` for this).
+
+`harness.commits` must list **one message per group**, including extra chunks of the same module.
+
+Order: production for a module (split chunks first), then `test` for that module (also split if oversized), then `chore` for docs/specs/cursor/harness leftovers.
 
 ## How to name `module`
 
