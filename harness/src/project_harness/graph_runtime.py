@@ -6,6 +6,7 @@ import sqlite3
 from typing import cast
 
 from .artifacts import ArtifactService
+from .checks import CheckRunner
 from .commits import apply_commit_plan
 from .config import HarnessConfig
 from .context_service import ContextService
