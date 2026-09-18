@@ -39,6 +39,8 @@ def test_templates_use_english_headings() -> None:
     assert "## Planned Tests" in TEMPLATES["tasks.md"]
     assert "## Required Gates" in TEMPLATES["tasks.md"]
     assert "## Verdict" in REVIEW_TEMPLATE
+    assert "## Deterministic checks" in REVIEW_TEMPLATE
+    assert "## Harness gate" in REVIEW_TEMPLATE
 
 
 def test_prepare_writes_english_templates(harness_source: Path, tmp_path: Path) -> None:
@@ -90,3 +92,20 @@ def test_plan_requires_user_story(harness_source: Path, tmp_path: Path) -> None:
     (task / "spec.md").write_text("# Specification\n\n## Acceptance Criteria\n- AC-001 x\n", encoding="utf-8")
     with pytest.raises(HarnessError, match="User Stories"):
         service.validate_plan(task)
+
+
+def test_plan_barrier_summary_leads_with_gates_not_commits(harness_source: Path, tmp_path: Path) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_valid(task)
+    text = service.plan_barrier_summary(task)
+    assert text.index("Barreira de teste") < text.index("python -m pytest")
+    assert "feat(auth): add login" not in text
+    assert "commit_message" not in text
+    assert "Este gate libera implementação" in text
+    assert "UT-001 covers AC-001" in text
+    assert "`test`" in text
+    assert "`lint`" in text
+    assert "`build`" in text

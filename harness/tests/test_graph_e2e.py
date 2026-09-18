@@ -114,6 +114,13 @@ def test_full_graph_plan_execute_review_commit_merge(tmp_path: Path, harness_sou
         graph.resume(meta, {"kind": "agent_result", "phase": "plan", "status": "success"})
         action = store.read_action(task_id)
         assert action is not None and action.get("gate") == "plan"
+        summary = str(action.get("summary") or "")
+        assert "Barreira de teste" in summary
+        assert "feat(reservation): add booking" not in summary
+        assert action.get("gates") == [
+            {"id": "unit", "command": "python -c 'print(1)'", "required": True}
+        ]
+        assert "Este gate não autoriza commit" in str(action.get("message") or "")
 
         graph.resume(meta, {"kind": "human_decision", "decision": "approve"})
         action = store.read_action(task_id)
@@ -153,8 +160,12 @@ def test_full_graph_plan_execute_review_commit_merge(tmp_path: Path, harness_sou
                 "result": str(consolidated),
             },
         )
+        review_md = (task_dir / "review" / "review-01.md").read_text(encoding="utf-8")
         assert (task_dir / "review" / "review-01.md").is_file()
         assert not (task_dir / "review.md").exists()
+        assert "✅ APPROVED" in review_md.split("**Harness gate**", 1)[0]
+        assert "**Deterministic checks**" in review_md
+        assert "required checks are green" in review_md
         action = store.read_action(task_id)
         assert action is not None and action.get("gate") == "commit"
 
