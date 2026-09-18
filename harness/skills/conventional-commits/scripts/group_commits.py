@@ -77,10 +77,10 @@ def module_of(path: str) -> str:
 
 
 def kind_of(path: str) -> str:
-    if is_test_path(path):
-        return "test"
     if is_meta_path(path):
         return "meta"
+    if is_test_path(path):
+        return "test"
     return "code"
 
 

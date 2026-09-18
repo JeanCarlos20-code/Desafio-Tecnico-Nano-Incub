@@ -115,8 +115,6 @@ REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 
 ## Summary
 
-## Deterministic checks
-
 ## Blockers
 
 ## High
@@ -131,6 +129,8 @@ REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 """
 REVIEW_DIRNAME = "review"
 REVIEW_FILE_RE = re.compile(r"^review-(\d{2,})\.md$")
+CHECKS_DIRNAME = "tests"
+CHECKS_FILE_RE = re.compile(r"^checks-(\d{2,})\.md$")
 TEST_LEVELS = ("unit", "integration", "e2e")
 RUNNER_COMMAND_RE = re.compile(
     r"^(npm\s|npx\s|yarn\s|pnpm\s|php\s+artisan\s|vendor/bin/|pytest\b|"
@@ -192,6 +192,32 @@ class ArtifactService:
         path = directory / f"review-{number:02d}.md"
         if path.exists():
             raise HarnessError(f"Review já existe e não pode ser substituída: {path.name}")
+        path.write_text(markdown, encoding="utf-8")
+        return path
+
+    def checks_dir(self, task_dir: Path) -> Path:
+        return task_dir / CHECKS_DIRNAME
+
+    def list_checks(self, task_dir: Path) -> tuple[Path, ...]:
+        directory = self.checks_dir(task_dir)
+        if not directory.is_dir():
+            return ()
+        found: list[tuple[int, Path]] = []
+        for path in directory.iterdir():
+            match = CHECKS_FILE_RE.match(path.name)
+            if match and path.is_file():
+                found.append((int(match.group(1)), path))
+        found.sort(key=lambda item: item[0])
+        return tuple(item[1] for item in found)
+
+    def write_checks(self, task_dir: Path, round_number: int, markdown: str) -> Path:
+        if round_number < 1:
+            raise HarnessError("Check history round must be >= 1.")
+        directory = self.checks_dir(task_dir)
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"checks-{round_number:02d}.md"
+        if path.exists():
+            raise HarnessError(f"Checks history já existe e não pode ser substituída: {path.name}")
         path.write_text(markdown, encoding="utf-8")
         return path
 
