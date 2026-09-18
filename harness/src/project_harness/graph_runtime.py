@@ -546,7 +546,11 @@ class HarnessGraph:
             "kind": "human",
             "gate": "commit",
             "task_id": meta.task_id,
-            "message": "Review e checks passaram. Inspecione o código antes de autorizar commit + integração na branch alvo.",
+            "message": (
+                "Review e checks passaram. Inspecione o código antes de autorizar commit + integração na branch alvo. "
+                "Pedido adicional de escopo deve mergear e iniciar nova task; substituição quase completa do pedido "
+                "deve cancelar sem merge e iniciar nova task, não chame revise-code em silêncio."
+            ),
             "worktree": str(meta.worktree_path),
             "target_branch": meta.target_branch,
             "task_branch": meta.task_branch,
@@ -610,7 +614,9 @@ class HarnessGraph:
         return {"phase": "done", "status": "completed"}
 
     def _canceled(self, state: HarnessState) -> HarnessState:
-        self.store.clear_action(state["task_id"])
+        meta = self._meta(state)
+        self.git.cleanup(meta.worktree_path, meta.task_branch, delete_unmerged=True)
+        self.store.clear_action(meta.task_id)
         return {"phase": "canceled", "status": "canceled"}
 
     def _needs_human(self, state: HarnessState) -> HarnessState:
