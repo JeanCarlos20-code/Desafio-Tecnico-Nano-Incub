@@ -77,6 +77,20 @@ def test_groups_split_module_and_tests() -> None:
     ]
 
 
+def test_specs_check_history_under_tests_is_meta_not_product_test() -> None:
+    groups = group_changed_paths(
+        (
+            ".specs/tasks/0001-foo/review/review-01.md",
+            ".specs/tasks/0001-foo/tests/checks-01.md",
+        )
+    )
+    assert [(item.kind, item.module) for item in groups] == [("meta", "specs")]
+    assert groups[0].paths == (
+        ".specs/tasks/0001-foo/review/review-01.md",
+        ".specs/tasks/0001-foo/tests/checks-01.md",
+    )
+
+
 def test_match_requires_separate_test_commit() -> None:
     paths = (
         "app/Modules/User/Application/CreateUser.php",

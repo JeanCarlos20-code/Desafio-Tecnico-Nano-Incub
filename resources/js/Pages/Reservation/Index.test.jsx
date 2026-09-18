@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
@@ -8,6 +9,14 @@ vi.mock('@inertiajs/react', () => ({
         processing: false,
         post: () => {},
     }),
+    usePage: () => ({
+        url: '/reservations',
+        props: {
+            auth: { user: { name: 'Ada Lovelace' } },
+            flash: { success: null, error: null },
+        },
+    }),
+    Link: ({ href, children, className, ...props }) => createElement('a', { href, className, ...props }, children),
 }));
 
 afterEach(() => {

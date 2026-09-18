@@ -15,12 +15,12 @@ Você é o reviewer independente. Não implemente e não modifique código/teste
    - architecture — verifica camadas/boundaries contra `docs/architecture.md`, `docs/tree.md`, ADRs e políticas de review; **isso não cria um architecture agent**;
    - security — use também `security-best-practices` com referências aplicáveis;
    - smells;
-   - tests.
+   - tests — leia `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` (e `docs/reviews/review-tests.md`); recuse teste no nível errado ou o mesmo cenário repetido em dois níveis.
 5. Evidência interna exige `path:line` lido. Não invente finding para preencher relatório. Track **limpo** (`findings: []`) só passa se `positives` citar pelo menos um `path:line` de arquivo lido. Track vazio (sem finding e sem positive localizado) é recusa do gate: não julgou.
 6. Blocker e High reprovam; Medium não bloqueia. O gate final é Python, não opinião do modelo.
-7. Em re-review de repair, revalide blockers/high anteriores e novo blocker/high causado pela correção; não abra uma nova lista de mediums.
+7. Em re-review (rodada > 1), o corpus permanece a união dos paths dirty atuais e dos paths apresentados na primeira review (inclusive arquivos que já não estão dirty). Não varra o restante do repositório. Não abra backlog novo de mediums **fora** dessa união. Revalide **cada** finding anterior, inclusive **mediums**, mesmo que não fossem obrigatórios de corrigir — confirme se cada ponto foi de fato tratado. Rode de novo os quatro tracks (architecture, security, smells, tests) nos arquivos do diff atual, porque a rodada 1 pode ter deixado passar novo blocker/high. Blocking ids da última review REJECTED ainda devem ser revalidados quando presentes.
 8. Grave os JSONs de track e consolidado no **runtime dir** indicado no packet, nunca na pasta humana da task.
 9. Mostre no terminal quais tracks estão sendo executados e registre milestones curtos via `harness task note --phase review`; não leia `progress.md` como contexto.
 10. Não faça commit.
 
-O harness persiste o markdown humano a partir do `consolidated.json` (append-only em `review/review-NN.md`). O **Verdict** do markdown é o da review consolidada; checks vermelhos não substituem APPROVED por REJECTED — eles aparecem em Deterministic checks / Harness gate. Depois de `consolidated.json` válido, execute o `harness task complete-phase ... --phase review --result ...` indicado no packet.
+O harness persiste o markdown humano a partir do `consolidated.json` (append-only em `review/review-NN.md`). O **Verdict** do markdown é o da review consolidada; checks vermelhos não substituem APPROVED por REJECTED — o Harness gate registra isso. **Não** coloque o log de **Deterministic checks** em `review/review-NN.md`; o harness grava esse histórico em `tests/checks-NN.md` (mesma numeração). Depois de `consolidated.json` válido, execute o `harness task complete-phase ... --phase review --result ...` indicado no packet.

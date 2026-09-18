@@ -13,6 +13,12 @@ from .context_service import ContextService
 from .errors import HarnessError
 from .git_manager import GitManager
 from .packets import PacketService
+from .review_scope import (
+    cited_review_paths,
+    route_after_checks,
+    route_after_review,
+    union_presented_paths,
+)
 from .review_service import ReviewService
 from .stack import StackLoader, merge_verify_paths
 from .task_store import TaskStore
@@ -60,6 +66,7 @@ class HarnessGraph:
         builder.add_node("review_gate", self._review_gate)
         builder.add_node("repair_worker", self._repair_worker)
         builder.add_node("repair_escalation", self._repair_escalation)
+        builder.add_node("check_fail_escalation", self._check_fail_escalation)
         builder.add_node("commit_approval", self._commit_approval)
         builder.add_node("commit", self._commit)
         builder.add_node("merge", self._merge)
@@ -79,7 +86,15 @@ class HarnessGraph:
             },
         )
         builder.add_edge("execute_worker", "checks")
-        builder.add_edge("checks", "review_worker")
+        builder.add_conditional_edges(
+            "checks",
+            self._route_checks,
+            {
+                "review": "review_worker",
+                "repair": "repair_worker",
+                "notify": "check_fail_escalation",
+            },
+        )
         builder.add_edge("review_worker", "review_gate")
         builder.add_conditional_edges(
             "review_gate",
@@ -93,6 +108,11 @@ class HarnessGraph:
         builder.add_edge("repair_worker", "checks")
         builder.add_conditional_edges(
             "repair_escalation",
+            self._route_escalation,
+            {"retry": "repair_worker", "stop": "needs_human"},
+        )
+        builder.add_conditional_edges(
+            "check_fail_escalation",
             self._route_escalation,
             {"retry": "repair_worker", "stop": "needs_human"},
         )
@@ -135,6 +155,8 @@ class HarnessGraph:
             "phase": "plan",
             "repair_round": 0,
             "review_round": 0,
+            "check_fix_round": 0,
+            "review_presented_paths": [],
             "blocking_ids": [],
             "check_results": [],
             "runtime_dir": str(self.store.runtime_root),
@@ -279,8 +301,16 @@ class HarnessGraph:
 
     def _repair_worker(self, state: HarnessState) -> HarnessState:
         meta = self._meta(state)
-        next_round = int(state.get("repair_round", 0)) + 1
         checks = self._checks_from_state(state)
+        checks_green = self.checks.required_passed(checks)
+        if checks_green:
+            check_fix_round = int(state.get("check_fix_round", 0))
+            repair_round = int(state.get("repair_round", 0)) + 1
+            progress_id = f"repair-{repair_round}"
+        else:
+            check_fix_round = int(state.get("check_fix_round", 0)) + 1
+            repair_round = int(state.get("repair_round", 0))
+            progress_id = f"check-fix-{check_fix_round}"
         failed = tuple(item for item in checks if item.required and not item.passed)
         blocking = tuple(state.get("blocking_ids", []))
         feedback = state.get("code_feedback", "")
@@ -298,13 +328,14 @@ class HarnessGraph:
         self._agent_interrupt(meta, "repair", packet)
         self.artifacts.append_progress(
             self._task_dir(state),
-            f"repair-{next_round}",
-            f"Repair round {next_round} finished; checks will run again.",
+            progress_id,
+            f"Repair finished ({progress_id}); checks will run again.",
         )
         return {
             "phase": "checks",
             "last_worker_phase": "repair",
-            "repair_round": next_round,
+            "repair_round": repair_round,
+            "check_fix_round": check_fix_round,
             "code_feedback": "",
             "packet_path": str(packet),
         }
@@ -343,19 +374,59 @@ class HarnessGraph:
                 }
             )
         green = self.checks.required_passed(results)
+        route = route_after_checks(
+            required_passed=green,
+            check_fix_round=int(state.get("check_fix_round", 0)),
+            max_repair_rounds=self.config.workflow.max_repair_rounds,
+        )
+        if green:
+            progress = "Required checks are green; starting Review."
+            phase = "review"
+            check_fix_round = 0
+        elif route == "repair":
+            progress = "Required checks failed; routing to Repair without Review."
+            phase = "repair"
+            check_fix_round = int(state.get("check_fix_round", 0))
+        else:
+            progress = "Required checks failed; check-fix budget exhausted; notifying the user."
+            phase = "check_fail_limit"
+            check_fix_round = int(state.get("check_fix_round", 0))
         self.artifacts.append_progress(
             task_dir,
             f"checks-{state.get('repair_round', 0)}-{state.get('review_round', 0)}",
-            "Required checks are green." if green else "Required checks failed; review still runs before repair.",
+            progress,
         )
-        return {"phase": "review", "check_results": payloads}
+        return {
+            "phase": phase,
+            "check_results": payloads,
+            "check_fix_round": check_fix_round,
+        }
+
+    def _route_checks(self, state: HarnessState) -> str:
+        return route_after_checks(
+            required_passed=self.checks.required_passed(self._checks_from_state(state)),
+            check_fix_round=int(state.get("check_fix_round", 0)),
+            max_repair_rounds=self.config.workflow.max_repair_rounds,
+        )
 
     def _review_worker(self, state: HarnessState) -> HarnessState:
         meta = self._meta(state)
         next_round = int(state.get("review_round", 0)) + 1
         checks = self._checks_from_state(state)
         blocking = tuple(state.get("blocking_ids", []))
-        packet = self.packets.review(meta, round_number=next_round, blocking_ids=blocking, check_results=checks)
+        worktree = Path(state["worktree_path"])
+        dirty = self.git.changed_paths(worktree)
+        presented = tuple(str(item) for item in state.get("review_presented_paths", []))
+        if next_round == 1:
+            presented = union_presented_paths(presented, dirty)
+        packet = self.packets.review(
+            meta,
+            round_number=next_round,
+            blocking_ids=blocking,
+            check_results=checks,
+            dirty_paths=dirty,
+            presented_paths=presented,
+        )
         response = self._agent_interrupt(meta, "review", packet)
         expected = self.store.review_dir(meta.task_id, next_round) / "consolidated.json"
         result_raw = as_str(response.get("result"))
@@ -363,11 +434,25 @@ class HarnessGraph:
         if not report_path.is_file():
             raise HarnessError(f"Review consolidada não encontrada: {report_path}")
         review = self.reviews.load(report_path)
+        cited = cited_review_paths(
+            finding_paths=(item.path for item in review.findings),
+            positives=review.positives,
+            unverified=review.unverified,
+        )
+        presented = union_presented_paths(presented, dirty, cited)
         checks_green = self.checks.required_passed(checks)
         task_dir = self._task_dir(state)
         written = self.artifacts.write_review(
             task_dir,
-            self.reviews.render_markdown(review, checks_green, self.checks.render(checks)),
+            self.reviews.render_markdown(review, checks_green),
+        )
+        self.artifacts.write_checks(
+            task_dir,
+            next_round,
+            self.reviews.render_checks_markdown(
+                self.checks.render(checks),
+                round_number=next_round,
+            ),
         )
         self.artifacts.append_progress(
             task_dir,
@@ -377,6 +462,8 @@ class HarnessGraph:
         return {
             "phase": "review_gate",
             "review_round": next_round,
+            "check_fix_round": 0,
+            "review_presented_paths": list(presented),
             "review_verdict": review.verdict.value,
             "blocking_ids": list(review.blocking_ids),
             "review_report_path": str(report_path),
@@ -387,13 +474,12 @@ class HarnessGraph:
         return {"phase": "review_gate"}
 
     def _route_review(self, state: HarnessState) -> str:
-        checks_green = self.checks.required_passed(self._checks_from_state(state))
-        approved = state.get("review_verdict") == ReviewVerdict.APPROVED.value
-        if approved and checks_green:
-            return "approved"
-        if int(state.get("repair_round", 0)) < self.config.workflow.max_repair_rounds:
-            return "repair"
-        return "escalate"
+        return route_after_review(
+            approved=state.get("review_verdict") == ReviewVerdict.APPROVED.value,
+            required_passed=self.checks.required_passed(self._checks_from_state(state)),
+            review_round=int(state.get("review_round", 0)),
+            max_repair_rounds=self.config.workflow.max_repair_rounds,
+        )
 
     def _repair_escalation(self, state: HarnessState) -> HarnessState:
         meta = self._meta(state)
@@ -401,7 +487,10 @@ class HarnessGraph:
             "kind": "human",
             "gate": "repair_limit",
             "task_id": meta.task_id,
-            "message": f"A tarefa atingiu {self.config.workflow.max_repair_rounds} repairs sem ficar verde.",
+            "message": (
+                f"A tarefa atingiu {self.config.workflow.max_repair_rounds} ciclos de "
+                "review-repair sem aprovação."
+            ),
             "blocking_ids": list(state.get("blocking_ids", [])),
             "options": ["retry", "stop"],
         }
@@ -417,6 +506,34 @@ class HarnessGraph:
             return {"human_message": "stop", "status": "needs_human_attention"}
         raise HarnessError(f"Decisão inválida no limite de repair: {value}")
 
+    def _check_fail_escalation(self, state: HarnessState) -> HarnessState:
+        meta = self._meta(state)
+        checks = self._checks_from_state(state)
+        failed = [item.id for item in checks if item.required and not item.passed]
+        payload: JSONObject = {
+            "kind": "human",
+            "gate": "check_fail_limit",
+            "task_id": meta.task_id,
+            "message": (
+                f"Os checks obrigatórios continuam vermelhos após "
+                f"{self.config.workflow.max_repair_rounds} tentativas de correção. "
+                "A Review não será iniciada."
+            ),
+            "failed_checks": failed,
+            "options": ["retry", "stop"],
+        }
+        decision = self._human_interrupt(meta, payload)
+        value = as_str(decision.get("decision"))
+        if value == "retry":
+            return {
+                "human_message": "retry",
+                "check_fix_round": 0,
+                "code_feedback": as_str(decision.get("message")),
+            }
+        if value == "stop":
+            return {"human_message": "stop", "status": "needs_human_attention"}
+        raise HarnessError(f"Decisão inválida no limite de check-fix: {value}")
+
     @staticmethod
     def _route_escalation(state: HarnessState) -> str:
         return state.get("human_message", "stop")
@@ -429,7 +546,11 @@ class HarnessGraph:
             "kind": "human",
             "gate": "commit",
             "task_id": meta.task_id,
-            "message": "Review e checks passaram. Inspecione o código antes de autorizar commit + integração na branch alvo.",
+            "message": (
+                "Review e checks passaram. Inspecione o código antes de autorizar commit + integração na branch alvo. "
+                "Pedido adicional de escopo deve mergear e iniciar nova task; substituição quase completa do pedido "
+                "deve cancelar sem merge e iniciar nova task, não chame revise-code em silêncio."
+            ),
             "worktree": str(meta.worktree_path),
             "target_branch": meta.target_branch,
             "task_branch": meta.task_branch,
@@ -493,7 +614,9 @@ class HarnessGraph:
         return {"phase": "done", "status": "completed"}
 
     def _canceled(self, state: HarnessState) -> HarnessState:
-        self.store.clear_action(state["task_id"])
+        meta = self._meta(state)
+        self.git.cleanup(meta.worktree_path, meta.task_branch, delete_unmerged=True)
+        self.store.clear_action(meta.task_id)
         return {"phase": "canceled", "status": "canceled"}
 
     def _needs_human(self, state: HarnessState) -> HarnessState:

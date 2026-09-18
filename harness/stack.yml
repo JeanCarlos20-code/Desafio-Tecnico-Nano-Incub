@@ -42,7 +42,7 @@ components:
 
     commands:
       test:
-        command: php artisan test
+        command: php artisan test && npm run test
 
       unit:
         command: php artisan test --testsuite=Unit --coverage --min=80
@@ -57,16 +57,10 @@ components:
         command: npx playwright test
 
       lint:
-        command: vendor/bin/pint --test
+        command: vendor/bin/pint --test && npm run lint
 
-      frontend_lint:
-        command: npm run lint
-
-      php_build:
-        command: composer run build
-
-      frontend_build:
-        command: npm run build
+      build:
+        command: composer run build && npm run build
 
   - name: harness
     root: harness
