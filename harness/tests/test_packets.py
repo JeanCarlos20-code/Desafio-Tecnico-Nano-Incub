@@ -8,7 +8,7 @@ from project_harness.git_manager import GitManager
 from project_harness.packets import ContextPacket, PacketService
 from project_harness.stack import StackLoader
 from project_harness.task_store import TaskStore
-from project_harness.types import TaskMeta
+from project_harness.types import CheckResult, TaskMeta
 from conftest import run
 
 
@@ -261,3 +261,166 @@ def test_review_packet_requires_test_strategy_docs(git_repo: Path) -> None:
     )
     assert "docs/test/unit.md" in text
     assert "docs/reviews/review-tests.md" in text
+
+
+def _packet_service(git_repo: Path) -> tuple[PacketService, TaskMeta]:
+    harness_dir = git_repo / "harness"
+    harness_dir.mkdir()
+    (harness_dir / "config.yaml").write_text(MIN_CONFIG, encoding="utf-8")
+    (harness_dir / "stack.yml").write_text(STACK_YAML, encoding="utf-8")
+    config = load_config(git_repo)
+    store = TaskStore(git_repo, config)
+    packets = PacketService(git_repo, store, ContextService(git_repo, config))
+    meta = TaskMeta(
+        task_id="0009",
+        slug="add-widget",
+        request="add widget",
+        target_branch="feature/challenge",
+        base_commit="abc",
+        task_branch="harness/0009-add-widget",
+        worktree_path=git_repo,
+        task_dir_relative=Path(".specs/tasks/0009-add-widget"),
+        thread_id="thread-packets",
+    )
+    return packets, meta
+
+
+def test_review_packet_round_two_lists_dirty_and_carried_first_review_paths(git_repo: Path) -> None:
+    packets, meta = _packet_service(git_repo)
+    text = packets.review(
+        meta,
+        round_number=2,
+        blocking_ids=("ARCH-001",),
+        check_results=(),
+        dirty_paths=("src/new.py",),
+        presented_paths=("src/new.py", "src/old.py"),
+    ).read_text(encoding="utf-8")
+    assert "`src/new.py`" in text
+    assert "`src/old.py`" in text
+    dirty_section = text.split("Dirty (alterados agora):", 1)[1]
+    assert dirty_section.index("`src/new.py`") < dirty_section.index("carried")
+    assert "`src/old.py`" in text.split("carried):", 1)[1]
+    assert "união" in text
+    assert "Não varra o restante do repositório" in text
+    assert "Não abra backlog novo de mediums fora dessa união" in text
+    assert "Revalide cada finding anterior, inclusive mediums" in text
+    assert "mesmo que não fossem obrigatórios de corrigir" in text
+    assert "quatro tracks" in text
+    assert "diff atual" in text
+    assert "Blocking ids da última review REJECTED ainda devem ser revalidados" in text
+    assert "checks-NN.md" in text
+    assert "**Não** grave o log de **Deterministic checks** nesse arquivo" in text
+
+
+def test_repair_packet_after_check_only_failure_does_not_require_previous_review(
+    git_repo: Path,
+) -> None:
+    packets, meta = _packet_service(git_repo)
+    failed = CheckResult(
+        id="unit",
+        command="python3 -c 'raise SystemExit(1)'",
+        exit_code=1,
+        stdout="",
+        stderr="boom",
+        required=True,
+    )
+    text = packets.execute(
+        meta,
+        repair=True,
+        feedback="",
+        blocking_ids=(),
+        failed_checks=(failed,),
+        latest_review=None,
+    ).read_text(encoding="utf-8")
+    assert "última review: (ausente)" in text
+    assert "Não há review anterior" in text
+    assert "`unit`" in text
+    assert "boom" in text
+    assert "Não invente findings de review" in text
+
+
+def test_execute_and_repair_packets_forbid_weakening_valid_tests_to_go_green(git_repo: Path) -> None:
+    packets, meta = _packet_service(git_repo)
+    execute_text = packets.execute(
+        meta,
+        repair=False,
+        feedback="",
+        blocking_ids=(),
+        failed_checks=(),
+    ).read_text(encoding="utf-8")
+    repair_text = packets.execute(
+        meta,
+        repair=True,
+        feedback="",
+        blocking_ids=(),
+        failed_checks=(),
+        latest_review=None,
+    ).read_text(encoding="utf-8")
+    for text in (execute_text, repair_text):
+        assert "Não edite, apague, pule ou enfraqueça um teste válido existente" in text
+        assert "só para fazer os checks obrigatórios passarem" in text
+        assert "corrija o código de produto ou do harness sob teste, não esse teste" in text
+        assert "Novos testes exigidos pela spec aprovada podem ser adicionados" in text
+
+
+def test_execute_agent_forbids_weakening_valid_tests_to_go_green(harness_source: Path) -> None:
+    text = (harness_source / "agents" / "execute.md").read_text(encoding="utf-8")
+    assert "não edite, apague, pule ou enfraqueça um teste válido existente" in text
+    assert "corrija o código de produto ou do harness sob teste, não esse teste" in text
+    assert "Novos testes exigidos pela spec aprovada podem ser adicionados" in text
+
+
+def test_execute_and_repair_packets_read_review_without_deterministic_checks_log(
+    git_repo: Path,
+) -> None:
+    packets, meta = _packet_service(git_repo)
+    latest = git_repo / meta.task_dir_relative / "review" / "review-01.md"
+    latest.parent.mkdir(parents=True)
+    latest.write_text("APPROVED\n", encoding="utf-8")
+    execute_text = packets.execute(
+        meta,
+        repair=False,
+        feedback="",
+        blocking_ids=(),
+        failed_checks=(),
+    ).read_text(encoding="utf-8")
+    repair_text = packets.execute(
+        meta,
+        repair=True,
+        feedback="",
+        blocking_ids=("ARCH-001",),
+        failed_checks=(),
+        latest_review=latest,
+        latest_verdict="REJECTED",
+        latest_result="/tmp/consolidated.json",
+    ).read_text(encoding="utf-8")
+    for text in (execute_text, repair_text):
+        assert "leia o último `review/review-NN.md`" in text
+        assert "**Não** contém o log de **Deterministic checks**" in text
+        assert "tests/checks-NN.md" in text
+        assert "check_summary" in text
+        assert "não é contexto da Execute" in text
+
+
+def test_review_skill_and_agent_require_stronger_later_round_rereview(
+    harness_source: Path,
+) -> None:
+    skill = (harness_source / "skills" / "harness-review" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    agent = (harness_source / "agents" / "review.md").read_text(encoding="utf-8")
+    assert "every previous finding" in skill
+    assert "**mediums**" in skill
+    assert "four-track review" in skill
+    assert "current diff files" in skill
+    assert "last REJECTED review" in skill
+    assert "new** medium backlog **outside" in skill or "new medium backlog **outside" in skill
+    assert "Do not scan the rest of the repository" in skill
+    assert "tests/checks-NN.md" in skill
+    assert "Do not paste the command log into `review/review-NN.md`" in skill
+    assert "finding anterior, inclusive **mediums**" in agent
+    assert "quatro tracks" in agent
+    assert "diff atual" in agent
+    assert "REJECTED ainda devem ser revalidados" in agent
+    assert "tests/checks-NN.md" in agent
+    assert "**Não** coloque o log de **Deterministic checks**" in agent

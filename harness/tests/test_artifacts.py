@@ -52,7 +52,11 @@ def test_templates_use_english_headings() -> None:
     assert "### E2E" in TEMPLATES["tasks.md"]
     assert "## Required Gates" in TEMPLATES["tasks.md"]
     assert "## Verdict" in REVIEW_TEMPLATE
-    assert "## Deterministic checks" in REVIEW_TEMPLATE
+    assert "## Deterministic checks" not in REVIEW_TEMPLATE
+    assert "## Blockers" in REVIEW_TEMPLATE
+    assert "## High" in REVIEW_TEMPLATE
+    assert "## Medium" in REVIEW_TEMPLATE
+    assert "## Positive Findings" in REVIEW_TEMPLATE
     assert "## Harness gate" in REVIEW_TEMPLATE
 
 
@@ -83,6 +87,23 @@ def test_write_review_appends_history_without_replacing(harness_source: Path, tm
     service.prepare(tmp_path, Path("task"), "add login", "0001")
     assert first.read_text(encoding="utf-8") == "round one REJECTED\n"
     assert not (task / "review.md").exists()
+
+
+def test_write_checks_appends_history_matching_review_numbering(
+    harness_source: Path, tmp_path: Path
+) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = service.prepare(tmp_path, Path("task"), "add login", "0001")
+    first = service.write_checks(task, 1, "# Deterministic checks — round 01\n\n- ✅ pytest\n")
+    second = service.write_checks(task, 2, "# Deterministic checks — round 02\n\n- ✅ lint\n")
+    assert first.name == "checks-01.md"
+    assert second.name == "checks-02.md"
+    assert first.parent.name == "tests"
+    assert [path.name for path in service.list_checks(task)] == ["checks-01.md", "checks-02.md"]
+    assert first.read_text(encoding="utf-8") == "# Deterministic checks — round 01\n\n- ✅ pytest\n"
+    with pytest.raises(HarnessError, match="Checks history já existe"):
+        service.write_checks(task, 1, "must not replace\n")
 
 
 def test_plan_validation(harness_source: Path, tmp_path: Path) -> None:
