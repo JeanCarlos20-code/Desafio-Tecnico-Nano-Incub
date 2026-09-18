@@ -6,6 +6,7 @@ export default function IconTextField({
     onChange,
     placeholder,
     autoComplete,
+    autoFocus = false,
     error,
     icon,
 }) {
@@ -30,6 +31,7 @@ export default function IconTextField({
                     onChange={onChange}
                     placeholder={placeholder}
                     autoComplete={autoComplete}
+                    autoFocus={autoFocus}
                     aria-required="true"
                     aria-invalid={error ? 'true' : 'false'}
                     aria-describedby={error ? errorId : undefined}
