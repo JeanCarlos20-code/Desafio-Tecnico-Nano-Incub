@@ -131,6 +131,8 @@ def test_plan_packet_includes_compact_stack_summary(git_repo: Path) -> None:
     assert "harness task complete-phase 0009 --phase plan" in text
     assert "./harness/run" not in text
     assert "Pedido do usuário" in text
+    assert "gate humano do PLAN" in text
+    assert "não** a lista de commits" in text
 
 
 def test_repair_packet_points_at_latest_review_verdict_and_result(git_repo: Path) -> None:
