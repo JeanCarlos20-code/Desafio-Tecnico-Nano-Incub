@@ -64,7 +64,7 @@ Use SPECIFY + TASKS. DESIGN não é obrigatório neste MVP; só use conceitos de
 
 - `harness/skills/conventional-commits/SKILL.md` — preencha `harness.commits` no frontmatter (um commit por módulo; testes separados). O **gate humano do PLAN** apresenta, nesta ordem: o plano, `harness.tests` (unit / integration / e2e, testes pontuais) e `harness.gates` + stack verify (comandos depois do Execute, antes da review). **Não** apresenta a lista de commits. Commits só entram no segundo gate. Não peça e não faça commit nesta fase.
 
-Leia `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` e classifique cada teste pontual nesses níveis. Cada item deve dizer **o comportamento protegido**, não o comando que roda a suíte.
+Leia até o fim `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` **antes** de preencher `harness.tests`. Eles são o contrato de fronteira (unit isolado sem HTTP/DB; integration = request Laravel + MySQL; e2e = browser seletivo). Classifique cada teste pontual nesses níveis **sem sobrepor** o mesmo cenário. Cada item deve dizer **o comportamento protegido**, não o comando que roda a suíte.
 
 ## Artefatos em `.specs/` (inglês)
 
@@ -227,6 +227,7 @@ Comece SOMENTE por:
 - `{task_dir / 'context.md'}`
 - `{task_dir / 'spec.md'}`
 - `{task_dir / 'tasks.md'}`
+- `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` (fronteira de testes; coloque cada item de `harness.tests` no nível declarado, sem sobrepor)
 {latest_line}
 A investigação ampla do Planner não atravessa esta fase. Use esses documentos como memória comprimida. Leia código inicialmente pelos arquivos/símbolos citados neles. Abra dependências adicionais apenas quando uma dependência concreta exigir.
 
@@ -251,7 +252,7 @@ Atualize `{task_dir / 'validation.md'}` em inglês, com:
 ## Regras
 
 1. Trabalhe somente nesta worktree.
-2. Testes derivam da spec e de `harness.tests`; crie um teste pontual para cada item no nível unit / integration / e2e. Não enfraqueça/remova testes válidos para ficar verde.
+2. Testes derivam da spec, de `harness.tests` e de `docs/test/unit.md` / `docs/test/integration.md` / `docs/test/e2e.md`; crie um teste pontual para cada item **no nível declarado**. Não enfraqueça/remova testes válidos para ficar verde.
 3. Prefira testes antes ou junto da implementação conforme a skill TLC.
 4. O `tasks.md` indica áreas esperadas, não é uma allowlist policialesca. Se um arquivo extra for necessário por dependência concreta, pode alterá-lo e registre a razão em `validation.md`.
 5. Não faça scope creep / "while I'm here".
@@ -290,7 +291,8 @@ Comece por:
 - `{task_dir / 'spec.md'}`
 - `{task_dir / 'tasks.md'}`
 - estado atual do diff/status desta worktree;
-- checks abaixo.
+- checks abaixo;
+- para o track tests: `docs/test/unit.md`, `docs/test/integration.md`, `docs/test/e2e.md` e `docs/reviews/review-tests.md`.
 
 Não herde conversa do Executor. Leia arquivos alterados e contexto adjacente apenas para verificar evidência.
 
