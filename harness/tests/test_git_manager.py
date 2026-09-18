@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+
+import pytest
 
 from project_harness.config import HarnessConfig, ContextLimits, GitConfig, WorkflowConfig
+from project_harness.errors import HarnessError
 from project_harness.git_manager import GitManager
 from conftest import run
+
+
+def _ref_exists(cwd: Path, ref: str) -> bool:
+    result = subprocess.run(
+        ["git", "show-ref", "--verify", ref],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def config(tmp_path: Path) -> HarnessConfig:
@@ -78,3 +93,34 @@ def test_changed_paths_omit_gitignored_harness(git_repo: Path, tmp_path: Path, m
     assert not any(path == "harness" or path.startswith("harness/") for path in porcelain)
     assert any(path == "harness" or path.startswith("harness/") for path in ignored)
     assert any(path == "vendor" or path.startswith("vendor/") for path in ignored)
+
+
+def test_cleanup_deletes_unmerged_worktree_and_branch(git_repo: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("HARNESS_TEST_WORKTREES", str(tmp_path / "worktrees"))
+    manager = GitManager(git_repo, config(tmp_path))
+    target_head = manager.head("feature/challenge")
+    wt, branch, _ = manager.create_worktree("0004", "cancel-cleanup", "feature/challenge")
+    (wt / "task-only.txt").write_text("unmerged\n", encoding="utf-8")
+    manager.commit(wt, "feat(test): unmerged task file")
+    (wt / "scratch.txt").write_text("uncommitted\n", encoding="utf-8")
+    manager.cleanup(wt, branch, delete_unmerged=True)
+    assert not wt.exists()
+    assert not _ref_exists(git_repo, f"refs/heads/{branch}")
+    assert manager.head("feature/challenge") == target_head
+    assert not (git_repo / "task-only.txt").exists()
+    assert not (git_repo / "scratch.txt").exists()
+
+
+def test_cleanup_without_unmerged_flag_keeps_safe_branch_delete(
+    git_repo: Path, tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("HARNESS_TEST_WORKTREES", str(tmp_path / "worktrees"))
+    manager = GitManager(git_repo, config(tmp_path))
+    wt, branch, _ = manager.create_worktree("0005", "safe-delete", "feature/challenge")
+    (wt / "task-only.txt").write_text("unmerged\n", encoding="utf-8")
+    manager.commit(wt, "feat(test): unmerged task file")
+    monkeypatch.setenv("LC_ALL", "C")
+    with pytest.raises(HarnessError, match="not fully merged"):
+        manager.cleanup(wt, branch)
+    assert _ref_exists(git_repo, f"refs/heads/{branch}")
+    assert not (git_repo / "task-only.txt").exists()

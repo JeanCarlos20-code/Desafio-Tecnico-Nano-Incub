@@ -173,13 +173,14 @@ class GitManager:
             ),
         )
 
-    def cleanup(self, worktree: Path, task_branch: str) -> None:
+    def cleanup(self, worktree: Path, task_branch: str, *, delete_unmerged: bool = False) -> None:
         result = run_process(["git", "worktree", "remove", "--force", str(worktree)], cwd=self.root)
         combined = f"{result.stderr} {result.stdout}".lower()
         missing_worktree = "not a working tree" in combined or "is not a working tree" in combined
         if result.returncode != 0 and not missing_worktree:
             raise HarnessError(result.stderr.strip() or result.stdout.strip())
-        delete = run_process(["git", "branch", "-d", task_branch], cwd=self.root)
+        flag = "-D" if delete_unmerged else "-d"
+        delete = run_process(["git", "branch", flag, task_branch], cwd=self.root)
         delete_text = f"{delete.stderr} {delete.stdout}".lower()
         missing_branch = "not found" in delete_text or "doesn't exist" in delete_text or "does not exist" in delete_text
         if delete.returncode != 0 and not missing_branch:
