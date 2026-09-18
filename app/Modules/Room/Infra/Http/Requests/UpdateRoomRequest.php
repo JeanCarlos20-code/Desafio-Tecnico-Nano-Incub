@@ -31,8 +31,8 @@ class UpdateRoomRequest extends FormRequest
         return [
             'name.required' => 'Informe o nome da sala.',
             'capacity.required' => 'Informe a capacidade da sala.',
-            'capacity.integer' => 'Informe a capacidade da sala.',
-            'capacity.min' => 'A capacidade deve ser no mínimo 1.',
+            'capacity.integer' => 'A capacidade deve ser um número inteiro.',
+            'capacity.min' => 'A capacidade deve ser de pelo menos 1 pessoa.',
         ];
     }
 

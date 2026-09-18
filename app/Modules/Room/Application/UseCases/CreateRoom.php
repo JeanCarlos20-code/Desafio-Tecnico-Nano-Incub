@@ -11,6 +11,6 @@ final class CreateRoom
 
     public function execute(string $name, int $capacity, ?bool $isActive = null): Room
     {
-        return $this->rooms->create($name, $capacity, $isActive ?? true);
+        return $this->rooms->create($name, $capacity, true);
     }
 }

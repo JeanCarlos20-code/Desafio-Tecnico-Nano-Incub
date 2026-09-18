@@ -19,7 +19,7 @@ class UpdateRoomController extends Controller
                 $room,
                 $data['name'],
                 (int) $data['capacity'],
-                array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true,
+                array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
             );
         } catch (RoomNotFound) {
             abort(404);
