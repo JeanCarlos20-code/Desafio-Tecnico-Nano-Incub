@@ -105,7 +105,9 @@ def test_full_graph_plan_execute_review_commit_merge(tmp_path: Path, harness_sou
             encoding="utf-8",
         )
         (task_dir / "tasks.md").write_text(
-            "---\nharness:\n  commit_message: \"feat(reservation): add booking\"\n"
+            "---\nharness:\n  commits:\n"
+            "    - \"feat(reservation): add booking\"\n"
+            "    - \"chore(specs): record reservation plan artifacts\"\n"
             "  tests:\n"
             "    unit:\n      - \"CreateReservation rejects an overlapping slot\"\n"
             "    integration:\n      - \"POST /reservations persists the booking in MySQL\"\n"
