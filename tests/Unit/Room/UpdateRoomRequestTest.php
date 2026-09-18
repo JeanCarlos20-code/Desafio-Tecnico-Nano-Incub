@@ -8,7 +8,19 @@ use Tests\TestCase;
 
 class UpdateRoomRequestTest extends TestCase
 {
-    public function test_it_applies_the_same_field_contract_as_store(): void
+    public function test_it_accepts_name_and_capacity_without_is_active(): void
+    {
+        $validated = $this->validated([
+            'name' => 'Sala Verde',
+            'capacity' => 4,
+        ]);
+
+        $this->assertSame('Sala Verde', $validated['name']);
+        $this->assertSame(4, $validated['capacity']);
+        $this->assertArrayNotHasKey('is_active', $validated);
+    }
+
+    public function test_it_trims_name_and_rejects_invalid_capacity_with_the_same_messages_as_store(): void
     {
         $missingName = $this->validationErrors([
             'capacity' => 8,
@@ -24,13 +36,13 @@ class UpdateRoomRequestTest extends TestCase
             'name' => 'Sala Azul',
             'capacity' => 'doze',
         ]);
-        $this->assertSame(['Informe a capacidade da sala.'], $nonInteger['capacity']);
+        $this->assertSame(['A capacidade deve ser um número inteiro.'], $nonInteger['capacity']);
 
         $belowMin = $this->validationErrors([
             'name' => 'Sala Azul',
             'capacity' => 0,
         ]);
-        $this->assertSame(['A capacidade deve ser no mínimo 1.'], $belowMin['capacity']);
+        $this->assertSame(['A capacidade deve ser de pelo menos 1 pessoa.'], $belowMin['capacity']);
 
         $validated = $this->validated([
             'name' => '  Sala Verde  ',
