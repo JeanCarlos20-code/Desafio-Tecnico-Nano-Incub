@@ -93,6 +93,8 @@ class HarnessState(TypedDict, total=False):
     code_feedback: str
     repair_round: int
     review_round: int
+    check_fix_round: int
+    review_presented_paths: list[str]
     blocking_ids: list[str]
     review_verdict: str
     check_results: list[dict[str, JSONValue]]

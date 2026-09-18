@@ -78,7 +78,6 @@ class ReviewService:
         self,
         result: ReviewResult,
         checks_green: bool,
-        check_summary: str = "",
     ) -> str:
         blockers = [item for item in result.findings if item.severity == "blocker"]
         highs = [item for item in result.findings if item.severity == "high"]
@@ -100,9 +99,6 @@ class ReviewService:
 
         positives = "\n".join(f"- {item}" for item in result.positives) or "None noted."
         summary = result.summary.strip() or "Review complete."
-        checks_block = check_summary.strip() or (
-            "Required checks are green." if checks_green else "Required deterministic checks are not green."
-        )
         review_verdict = "✅ APPROVED" if review_approved else "❌ REJECTED"
         if gate_open:
             gate_line = "✅ open — review APPROVED and required checks are green."
@@ -116,8 +112,6 @@ class ReviewService:
             "🤖 **AI Code Review (S)**\n\n"
             "**Summary**\n\n"
             f"{summary}\n\n"
-            "**Deterministic checks**\n\n"
-            f"{checks_block}\n\n"
             "**❌ Blockers**\n\n"
             f"{section(blockers, 'None found.')}\n\n"
             "**⚠️ High**\n\n"
@@ -131,3 +125,7 @@ class ReviewService:
             "**Harness gate**\n\n"
             f"{gate_line}\n"
         )
+
+    def render_checks_markdown(self, check_summary: str, *, round_number: int) -> str:
+        body = check_summary.strip() or "Nenhum comando automático configurado para esta tarefa."
+        return f"# Deterministic checks — round {round_number:02d}\n\n{body}\n"
