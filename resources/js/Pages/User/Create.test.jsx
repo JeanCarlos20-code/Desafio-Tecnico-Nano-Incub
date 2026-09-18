@@ -272,10 +272,37 @@ describe('User/Create register screen', () => {
         const hero = container.querySelector('[data-layout="register-hero"]');
 
         expect(card.className).toMatch(/lg:grid-cols-/);
+        expect(card.className).toMatch(/lg:grid-cols-\[minmax\(0,44%\)_minmax\(0,56%\)\]/);
         expect(hero.className).toMatch(/hidden/);
         expect(hero.className).toMatch(/lg:flex/);
         expect(screen.getByRole('button', { name: 'Criar usuário' }).className).toMatch(/w-full/);
         expect(screen.getByRole('link', { name: 'Ir para o login' }).className).toMatch(/w-full/);
         expect(container.firstChild.className).toMatch(/overflow-x-hidden/);
+        const form = screen.getByRole('button', { name: 'Criar usuário' }).closest('form');
+        expect(form.textContent).toContain('Reserva');
+        expect(form.textContent).toContain('Salas');
+    });
+
+    it('centers the register card in a full-viewport flex shell with 24px horizontal padding', () => {
+        const { container } = renderCreate();
+
+        const shell = container.firstChild;
+        const card = container.querySelector('[data-layout="register-card"]');
+
+        expect(shell.className).toMatch(/\bflex\b/);
+        expect(shell.className).toMatch(/min-h-dvh|min-h-screen/);
+        expect(shell.className).toMatch(/\bitems-center\b/);
+        expect(shell.className).toMatch(/justify-center-safe|justify-center/);
+        expect(shell.className).toMatch(/overflow-x-hidden/);
+        expect(shell.className).toMatch(/\bpx-6\b/);
+        expect(card).toBeTruthy();
+        expect(shell.contains(card)).toBe(true);
+        expect(card.className).toMatch(/\bmax-w-5xl\b/);
+    });
+
+    it('keeps the start of the card reachable when the card is taller than the viewport', () => {
+        const { container } = renderCreate();
+
+        expect(container.firstChild.className).toMatch(/justify-center-safe/);
     });
 });
