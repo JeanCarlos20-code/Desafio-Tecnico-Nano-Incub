@@ -62,7 +62,10 @@ components:
       frontend_lint:
         command: npm run lint
 
-      build:
+      php_build:
+        command: composer run build
+
+      frontend_build:
         command: npm run build
 
   - name: harness
