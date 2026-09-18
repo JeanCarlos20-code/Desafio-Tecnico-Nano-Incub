@@ -184,7 +184,7 @@ PLAN deve preencher:
 
 - `context.md`: memória comprimida da investigação;
 - `spec.md`: problema, objetivo, User Stories, Acceptance Criteria e edge cases;
-- `tasks.md`: solução, abordagens consideradas, abordagem escolhida, tarefas, Planned Tests, Required Gates e Definition of Done.
+- `tasks.md`: solução, abordagens consideradas, abordagem escolhida, tarefas, testes pontuais em unit/integration/e2e (`harness.tests`) e Required Gates.
 
 `tasks.md` começa com frontmatter:
 
@@ -192,6 +192,13 @@ PLAN deve preencher:
 ---
 harness:
   commit_message: "feat(reservation): add room booking"
+  tests:
+    unit:
+      - "CreateReservation rejects an overlapping slot"
+    integration:
+      - "POST /reservations persists the booking in MySQL"
+    e2e:
+      - "Administrator books a room through the real screen"
   gates:
     - id: unit
       command: "php artisan test --testsuite=Unit"
@@ -201,6 +208,8 @@ harness:
       required: true
 ---
 ```
+
+O gate humano mostra o plano, depois os testes pontuais (unit / integration / e2e), depois os comandos que rodam após o Execute.
 
 Aprovar:
 

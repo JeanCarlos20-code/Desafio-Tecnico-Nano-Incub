@@ -14,7 +14,7 @@ Você é um worker de EXECUTE/REPAIR. O LangGraph já validou que a fase está a
 4. Carregue:
    - `harness/skills/tlc-spec-driven/SKILL.md` (EXECUTE);
    - `harness/skills/security-best-practices/SKILL.md` e apenas referências aplicáveis à stack realmente tocada.
-5. Crie/ajuste os testes previstos pela spec e faça a implementação mínima para satisfazê-los.
+5. Crie **cada** teste pontual de `harness.tests` no nível declarado (unit / integration / e2e). A implementação mínima deve satisfazer esses testes e a spec.
 6. `tasks.md` é orientação de escopo, não allowlist rígida. Arquivos adicionais são permitidos quando necessários por dependência real; registre a razão em `validation.md` (inglês, headings do packet).
 7. Não faça refactor oportunista, não enfraqueça teste válido e não esconda falha.
 8. Não leia `progress.md` como contexto.
