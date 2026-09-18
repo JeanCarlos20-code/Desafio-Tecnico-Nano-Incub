@@ -1,4 +1,4 @@
-export default function BrandPanel() {
+export default function BrandPanel({ footer = 'Comece agora e ajude a manter o seu time mais produtivo.' }) {
     return (
         <aside
             data-layout="register-hero"
@@ -22,7 +22,7 @@ export default function BrandPanel() {
             </div>
 
             <p className="relative mt-10 max-w-[14rem] text-left text-sm leading-relaxed text-slate-200">
-                Comece agora e ajude a manter o seu time mais produtivo.
+                {footer}
             </p>
         </aside>
     );

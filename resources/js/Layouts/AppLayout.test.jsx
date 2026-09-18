@@ -1,10 +1,29 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { useForm } from '@inertiajs/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import AppLayout from './AppLayout';
 
+vi.mock('@inertiajs/react', () => ({
+    useForm: vi.fn(),
+}));
+
+function createForm(overrides = {}) {
+    return {
+        processing: overrides.processing ?? false,
+        post: vi.fn(),
+        ...overrides,
+    };
+}
+
 afterEach(() => {
     cleanup();
+});
+
+beforeEach(() => {
+    useForm.mockReset();
+    useForm.mockReturnValue(createForm());
 });
 
 describe('AppLayout admin shell', () => {
@@ -47,5 +66,22 @@ describe('AppLayout admin shell', () => {
 
         expect(screen.queryByRole('heading')).not.toBeInTheDocument();
         expect(screen.getByText('Only child')).toBeInTheDocument();
+    });
+
+    it('posts logout when Sair is activated', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        render(
+            <AppLayout>
+                <p>Child content</p>
+            </AppLayout>,
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Sair' }));
+
+        expect(form.post).toHaveBeenCalledTimes(1);
+        expect(form.post).toHaveBeenCalledWith('/logout', expect.any(Object));
     });
 });
