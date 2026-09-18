@@ -1,26 +1,38 @@
-name: Branch flow
+name: Validate branch flow
 
 on:
   pull_request:
-    branches: [main]
-
-concurrency:
-  group: branch-flow-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches:
+      - main
+      - develop
 
 permissions:
   contents: read
 
 jobs:
-  main-from-develop:
-    name: main-from-develop
+  branch-flow:
+    name: Branch flow
     runs-on: ubuntu-latest
+
     steps:
-      - name: Reject PRs into main that are not from develop
+      - name: Validate source and target branches
         env:
-          HEAD_REF: ${{ github.head_ref }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        shell: bash
         run: |
-          if [ "$HEAD_REF" != "develop" ]; then
-            echo "::error::main only accepts pull requests from develop (got ${HEAD_REF}). Merge the feature into develop first."
+          echo "Validando fluxo: $HEAD_BRANCH -> $BASE_BRANCH"
+
+          if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "develop" ]]; then
+            echo "::error::A main só aceita pull requests vindos da develop."
             exit 1
           fi
+
+          if [[ "$BASE_BRANCH" == "develop" ]]; then
+            if [[ "$HEAD_BRANCH" == "main" || "$HEAD_BRANCH" == "develop" ]]; then
+              echo "::error::A develop só aceita pull requests vindos de branches de trabalho."
+              exit 1
+            fi
+          fi
+
+          echo "Fluxo de branches permitido."
