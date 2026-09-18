@@ -16,7 +16,6 @@ class StoreRoomController extends Controller
         $createRoom->execute(
             $data['name'],
             (int) $data['capacity'],
-            array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
         );
 
         return redirect()->route('rooms.index')->with('success', 'Sala criada com sucesso.');
