@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Modules\Room\Domain\Repositories\RoomRepository;
+use App\Modules\Room\Infra\Database\Repositories\EloquentRoomRepository;
 use App\Modules\User\Domain\Repositories\UserRepository;
 use App\Modules\User\Domain\UserAuthenticator;
 use App\Modules\User\Infra\Database\Repositories\EloquentUserRepository;
@@ -17,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(UserRepository::class, EloquentUserRepository::class);
         $this->app->bind(UserAuthenticator::class, LaravelUserAuthenticator::class);
+        $this->app->bind(RoomRepository::class, EloquentRoomRepository::class);
     }
 
     /**
