@@ -42,31 +42,19 @@ components:
 
     commands:
       test:
-        command: php artisan test
+        command: php artisan test && npm run test
 
       unit:
-        command: php artisan test --testsuite=Unit --coverage --min=80
+        command: php artisan test --testsuite=Unit --coverage --min=80 && npm run test:coverage
 
       integration:
         command: php artisan test --testsuite=Feature
-
-      frontend:
-        command: npm run test:coverage
 
       e2e:
         command: npx playwright test
 
       lint:
-        command: vendor/bin/pint --test
-
-      frontend_lint:
-        command: npm run lint
-
-      php_build:
-        command: composer run build
-
-      frontend_build:
-        command: npm run build
+        command: vendor/bin/pint --test && npm run lint
 
       build:
         command: composer run build && npm run build
