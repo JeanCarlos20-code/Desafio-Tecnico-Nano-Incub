@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm } from '@inertiajs/react';
@@ -7,6 +8,8 @@ import Login from './Login';
 
 vi.mock('@inertiajs/react', () => ({
     useForm: vi.fn(),
+    Link: ({ href, children, className }) =>
+        createElement('a', { href, className }, children),
 }));
 
 function createForm(overrides = {}) {
@@ -75,15 +78,18 @@ describe('User/Login screen', () => {
         expect(screen.getByText('Mais produtividade para o seu time.')).toBeInTheDocument();
     });
 
-    it('does not render a password-recovery control or a registration link', () => {
+    it('shows divider Não tem uma conta? and link Ir para o cadastro with href /register', () => {
         renderLogin();
 
-        expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        expect(screen.getByText('Não tem uma conta?')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Ir para o cadastro' })).toHaveAttribute('href', '/register');
+    });
+
+    it('does not render a password-recovery control', () => {
+        renderLogin();
+
         expect(screen.queryByText(/esqueci/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/recuper/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/criar conta/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/registrar/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/cadastre/i)).not.toBeInTheDocument();
     });
 
     it('posts email and password to /login through the session service', async () => {
@@ -137,6 +143,7 @@ describe('User/Login screen', () => {
         expect(submit).toBeDisabled();
         expect(submit.querySelector('svg')).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Entrar' })).not.toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Ir para o cadastro' })).toBeInTheDocument();
     });
 
     it('does not send a second request while processing', async () => {
