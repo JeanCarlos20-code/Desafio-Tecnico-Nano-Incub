@@ -47,7 +47,7 @@ O worker chama `harness task complete-phase` ao terminar. Depois consulte `harne
 
 ### `kind=human`, `gate=plan`
 
-Mostre ao usuário o plano/spec/testes/barreiras fornecidos pelo harness. Não implemente. Só depois de aprovação explícita rode:
+Mostre a **barreira de teste** do action (`gates`, `stack_verify_required` e `summary`). Resuma a solução em poucas linhas. **Não monte tabela de commits e não peça commit neste gate.** `harness.commits` só vale no `gate=commit`. Não implemente. Só depois de aprovação explícita rode:
 
 ```bash
 harness task approve-plan <task-id>

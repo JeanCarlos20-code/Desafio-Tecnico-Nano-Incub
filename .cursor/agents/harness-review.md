@@ -30,4 +30,4 @@ Você é o reviewer independente. Não implemente e não modifique código/teste
 9. Mostre no terminal quais tracks estão sendo executados e registre milestones curtos via `harness task note --phase review`; não leia `progress.md` como contexto.
 10. Não faça commit.
 
-Grave cada rodada em `review/review-01.md`, `review/review-02.md`, ... (o harness persiste o markdown a partir do `consolidated.json` e **nunca substitui** uma review anterior). Depois de `consolidated.json` válido, execute o `harness task complete-phase ... --phase review --result ...` indicado no packet.
+O harness persiste o markdown humano a partir do `consolidated.json` (append-only em `review/review-NN.md`). O **Verdict** do markdown é o da review consolidada; checks vermelhos não substituem APPROVED por REJECTED — eles aparecem em Deterministic checks / Harness gate. Depois de `consolidated.json` válido, execute o `harness task complete-phase ... --phase review --result ...` indicado no packet.
