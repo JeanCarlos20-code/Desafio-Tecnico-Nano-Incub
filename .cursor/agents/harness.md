@@ -47,7 +47,13 @@ O worker chama `harness task complete-phase` ao terminar. Depois consulte `harne
 
 ### `kind=human`, `gate=plan`
 
-Mostre a **barreira de teste** do action (`gates`, `stack_verify_required` e `summary`). Resuma a solução em poucas linhas. **Não monte tabela de commits e não peça commit neste gate.** `harness.commits` só vale no `gate=commit`. Não implemente. Só depois de aprovação explícita rode:
+Mostre o action nesta ordem:
+
+1. **Plano / tarefa** (`summary` → seção Plano).
+2. **Testes pontuais** (`tests`): o que será testado em **unit**, **integration** e **e2e** (regra de negócio, dado, validação, fluxo).
+3. **Comandos após o Execute** (`gates` e `stack_verify_required`): o que o Harness vai rodar antes da review, para o humano conferir se não falta comando.
+
+Não monte tabela de commits. Não implemente. Só depois de aprovação explícita rode:
 
 ```bash
 harness task approve-plan <task-id>
