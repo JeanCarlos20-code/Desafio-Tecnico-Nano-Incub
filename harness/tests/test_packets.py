@@ -134,6 +134,7 @@ def test_plan_packet_includes_compact_stack_summary(git_repo: Path) -> None:
     assert "gate humano do PLAN" in text
     assert "apresenta a lista de commits" in text
     assert "docs/test/unit.md" in text
+    assert "sem sobrepor" in text
     assert "harness.tests" in text
     assert "harness.gates" in text
 
@@ -180,6 +181,10 @@ def test_repair_packet_points_at_latest_review_verdict_and_result(git_repo: Path
     assert str(result) in text
     assert "`review.md`" not in text
     assert "última review" in text
+    assert "docs/test/unit.md" in text
+    assert "docs/test/integration.md" in text
+    assert "docs/test/e2e.md" in text
+    assert "no nível declarado" in text
 
 
 def test_plan_loads_stack_from_primary_when_worktree_lacks_gitignored_catalog(
@@ -214,3 +219,45 @@ def test_plan_loads_stack_from_primary_when_worktree_lacks_gitignored_catalog(
     assert "acme-board" in text
     assert "`api`" in text
     assert "foo" in text
+
+
+def test_docs_hint_lists_test_strategy_docs_when_present(git_repo: Path) -> None:
+    harness_dir = git_repo / "harness"
+    harness_dir.mkdir()
+    (harness_dir / "config.yaml").write_text(MIN_CONFIG, encoding="utf-8")
+    docs = git_repo / "docs" / "test"
+    docs.mkdir(parents=True)
+    (docs / "unit.md").write_text("# Unit\n", encoding="utf-8")
+    (docs / "integration.md").write_text("# Integration\n", encoding="utf-8")
+    (docs / "e2e.md").write_text("# E2E\n", encoding="utf-8")
+    config = load_config(git_repo)
+    hints = ContextService(git_repo, config).docs_hint(git_repo)
+    assert "docs/test/unit.md" in hints
+    assert "docs/test/integration.md" in hints
+    assert "docs/test/e2e.md" in hints
+
+
+def test_review_packet_requires_test_strategy_docs(git_repo: Path) -> None:
+    harness_dir = git_repo / "harness"
+    harness_dir.mkdir()
+    (harness_dir / "config.yaml").write_text(MIN_CONFIG, encoding="utf-8")
+    (harness_dir / "stack.yml").write_text(STACK_YAML, encoding="utf-8")
+    config = load_config(git_repo)
+    store = TaskStore(git_repo, config)
+    packets = PacketService(git_repo, store, ContextService(git_repo, config))
+    meta = TaskMeta(
+        task_id="0009",
+        slug="add-widget",
+        request="add widget",
+        target_branch="feature/challenge",
+        base_commit="abc",
+        task_branch="harness/0009-add-widget",
+        worktree_path=git_repo,
+        task_dir_relative=Path(".specs/tasks/0009-add-widget"),
+        thread_id="thread-packets",
+    )
+    text = packets.review(meta, round_number=1, blocking_ids=(), check_results=()).read_text(
+        encoding="utf-8"
+    )
+    assert "docs/test/unit.md" in text
+    assert "docs/reviews/review-tests.md" in text
