@@ -1,0 +1,26 @@
+name: Branch flow
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: branch-flow-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  main-from-develop:
+    name: main-from-develop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject PRs into main that are not from develop
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "develop" ]; then
+            echo "::error::main only accepts pull requests from develop (got ${HEAD_REF}). Merge the feature into develop first."
+            exit 1
+          fi
