@@ -348,10 +348,20 @@ def main(argv: list[str] | None = None) -> int:
             _require_action(store, args.task_id, kind="human", gate="commit")
             return _resume(root, args.task_id, {"kind": "human_decision", "decision": "request_changes", "message": args.message}, json_output=bool(args.json_output))
         if cmd == "retry-repair":
-            _require_action(store, args.task_id, kind="human", gate="repair_limit")
+            action = _require_action(store, args.task_id, kind="human")
+            gate = as_str(action.get("gate"))
+            if gate not in {"repair_limit", "check_fail_limit"}:
+                raise HarnessError(
+                    f"Gate atual não é repair_limit ou check_fail_limit: {gate}"
+                )
             return _resume(root, args.task_id, {"kind": "human_decision", "decision": "retry", "message": args.message}, json_output=bool(args.json_output))
         if cmd == "stop-repair":
-            _require_action(store, args.task_id, kind="human", gate="repair_limit")
+            action = _require_action(store, args.task_id, kind="human")
+            gate = as_str(action.get("gate"))
+            if gate not in {"repair_limit", "check_fail_limit"}:
+                raise HarnessError(
+                    f"Gate atual não é repair_limit ou check_fail_limit: {gate}"
+                )
             return _resume(root, args.task_id, {"kind": "human_decision", "decision": "stop"}, json_output=bool(args.json_output))
         if cmd == "cancel":
             action = _require_action(store, args.task_id, kind="human")

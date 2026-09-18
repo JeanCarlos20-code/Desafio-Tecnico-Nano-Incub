@@ -19,6 +19,22 @@ class LoginHttpTest extends TestCase
         $this->withoutVite();
     }
 
+    public function test_guest_home_renders_inertia_user_login(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('User/Login'));
+    }
+
+    public function test_authenticated_user_is_redirected_away_from_home(): void
+    {
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/')
+            ->assertRedirect(route('reservations.index'));
+    }
+
     public function test_guest_login_page_renders_inertia_user_login(): void
     {
         $this->get(route('login'))

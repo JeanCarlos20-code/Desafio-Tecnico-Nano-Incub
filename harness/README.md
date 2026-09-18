@@ -17,8 +17,8 @@ Incluído:
 - contexto limpo entre PLAN / EXECUTE / REVIEW por ContextPacket;
 - checks determinísticos definidos pelo plano;
 - REVIEW independente com architecture + security + smells + tests usando `harness-review`;
-- blocker/high + check obrigatório vermelho => repair;
-- no máximo 3 repairs antes de escalar ao humano;
+- blocker/high após Review APPROVED recusada, ou check obrigatório vermelho após Execute/Repair, => repair (check vermelho não inicia Review);
+- no máximo 3 ciclos de check-fix e, independentemente, 3 ciclos de review-repair antes de escalar ao humano;
 - segunda aprovação humana antes de commit/merge;
 - commit na task branch e merge na branch alvo;
 - conflito de merge nunca é resolvido automaticamente; o merge é abortado e worktree/branch ficam preservadas;
@@ -33,7 +33,7 @@ O diretório `harness/` deve ficar na raiz do projeto.
 ```bash
 python3 -m venv .venv-harness
 source .venv-harness/bin/activate
-pip install -e ./harness
+pip install -e "./harness[test]"
 ```
 
 O `langgraph-checkpoint-sqlite` persiste interrupts e estado em `.git/harness/checkpoints.sqlite`. O harness força `LANGGRAPH_STRICT_MSGPACK=true`; o state contém somente valores simples serializáveis.
@@ -225,9 +225,13 @@ harness task revise-plan 0001 "quero integração cobrindo conflito de horário"
 
 ## Execute / checks / review
 
-Execute não comita. O harness executa os gates do `tasks.md` depois do worker terminar.
+Execute não comita. O harness executa os gates do `tasks.md` e o stack verify (`test` / `lint` / `build`) depois do worker terminar.
 
-Review sempre acontece depois de Execute/Repair, inclusive quando há check vermelho. São quatro tracks:
+Loop canônico: Execute → test/build/lint obrigatórios → se vermelho, Repair no código (não enfraquece teste válido; isso **não** conta ciclo de review) e re-roda checks → tudo verde → Review → se REJECTED, Repair dos findings → checks de novo → Review só se verde, até APPROVED.
+
+Se o orçamento de check-fix se esgota e os checks obrigatórios continuam vermelhos, o harness notifica o humano (`gate=check_fail_limit`, retry/stop) e **não** inicia Review. `retry-repair` / `stop-repair` também respondem a esse gate.
+
+Review só começa com checks obrigatórios verdes. São quatro tracks:
 
 ```text
 architecture
@@ -238,12 +242,11 @@ tests
 
 Architecture é **review de boundaries/camadas**, não um architecture agent.
 
-Saída humana em `review/review-NN.md` (histórico append-only; o Execute/Repair usa só a última, com o veredito e o `consolidated.json` daquela rodada):
+Saída humana em `review/review-NN.md` (histórico append-only; o Execute/Repair usa só a última, com o veredito e o `consolidated.json` daquela rodada). O log de checks **não** entra nesse arquivo: fica em `tests/checks-NN.md` (append-only, mesma numeração). Rodadas seguintes reinspecionam o dirty atual **e** os arquivos apresentados na primeira review (mesmo que já não estejam dirty), revalidam **cada** finding anterior (inclusive mediums) e re-rodam os quatro tracks no diff atual:
 
 ```text
 🤖 AI Code Review (S)
 Summary
-Deterministic checks
 ❌ Blockers
 ⚠️ High
 📝 Medium
@@ -252,17 +255,19 @@ Verdict: ✅ APPROVED / ❌ REJECTED   ← review consolidada (não é substitu�
 Harness gate: open / blocked        ← review APPROVED **e** checks verdes
 ```
 
-Blocker/High ou check obrigatório vermelho retorna a Execute/Repair. O markdown não troca o Verdict da review quando o bloqueio veio só dos checks.
+Blocker/High devolve a Execute/Repair. Check obrigatório vermelho **não** inicia Review: vai para Repair (código) ou `check_fail_limit`. Execute/Repair não pode enfraquecer um teste válido só para ficar verde.
 
 ## Gate 2 — antes do commit
 
 Depois de checks verdes + review aprovada, o LangGraph interrompe novamente. O action mostra worktree, diff stat, review e comandos para inspecionar o código.
 
+Mudança simples / local (ainda no contrato original: layout, popup na tela já planejada, teste dos ACs existentes, copy, rename, bugfix) chama `revise-code` imediatamente, sem sugestão. Sugestão só se a mudança refizer a tarefa ou adicionar outra tarefa. Adição de escopo (pedido original ainda desejado) sugere mergear esta task e iniciar uma nova só com o extra: aceite é `approve-commit` e depois `harness task start`; recusa é `revise-code`. Substituição quase completa do pedido original sugere cancelar sem merge (limpa worktree, branch não mergeada e action) e iniciar uma nova task que replaneja; aceite é `cancel` e depois `start`; recusa é `revise-code`. Não existe comando `restart`.
+
 ```bash
 harness task approve-commit 0001
 ```
 
-ou:
+ou, para ajuste local / recusa de sugestão:
 
 ```bash
 harness task revise-code 0001 "simplifique esse service antes de integrar"
@@ -275,7 +280,7 @@ A revisão volta a acontecer depois dessa correção.
 ```text
 feature/desafio-salas (target branch)
   └─ harness/0001-task (worktree temporária)
-       PLAN -> EXECUTE -> REVIEW -> Gate 2
+       PLAN -> EXECUTE -> CHECKS -> REVIEW -> Gate 2
        -> commit
        -> merge --no-ff na target branch
        -> remove worktree

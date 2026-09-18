@@ -36,5 +36,8 @@ class ContextService:
             "docs/context.md",
             "docs/tree.md",
             "docs/architecture.md",
+            "docs/test/unit.md",
+            "docs/test/integration.md",
+            "docs/test/e2e.md",
         )
         return tuple(item for item in candidates if (worktree / item).is_file())
