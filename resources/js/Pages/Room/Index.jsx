@@ -123,19 +123,19 @@ export default function Index({ rooms, loadError = false, loading = false }) {
                                 <caption className="sr-only">Salas de reunião cadastradas</caption>
                                 <thead className="bg-slate-50 text-slate-600">
                                     <tr>
-                                        <th scope="col" className="min-w-0 px-4 py-3 font-medium">
+                                        <th scope="col" className="min-w-0 w-full px-4 py-3 font-medium">
                                             Nome
                                         </th>
-                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium">
+                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 text-center font-medium xl:w-[16%]">
                                             Capacidade
                                         </th>
-                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium">
+                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium xl:w-[16%]">
                                             Status
                                         </th>
-                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium">
+                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium xl:w-[16%]">
                                             Criada em
                                         </th>
-                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 text-right font-medium">
+                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 text-center font-medium xl:w-[16%]">
                                             Ações
                                         </th>
                                     </tr>
@@ -143,17 +143,17 @@ export default function Index({ rooms, loadError = false, loading = false }) {
                                 <tbody>
                                     {data.map((room) => (
                                         <tr key={room.id} className="border-t border-slate-100">
-                                            <td className="min-w-0 px-4 py-3 text-slate-900">{room.name}</td>
-                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-slate-700">
+                                            <td className="min-w-0 w-full px-4 py-3 text-slate-900">{room.name}</td>
+                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-center text-slate-700 xl:w-[16%]">
                                                 {room.capacity}
                                             </td>
-                                            <td className="w-0 whitespace-nowrap px-4 py-3">
+                                            <td className="w-0 whitespace-nowrap px-4 py-3 xl:w-[16%]">
                                                 <StatusBadge active={room.is_active} label={room.status} />
                                             </td>
-                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-slate-700">
+                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-slate-700 xl:w-[16%]">
                                                 {room.created_at}
                                             </td>
-                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-right">
+                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-center xl:w-[16%]">
                                                 <RowActions room={room} onDelete={openDelete} />
                                             </td>
                                         </tr>
