@@ -261,11 +261,13 @@ Blocker/High devolve a Execute/Repair. Check obrigatório vermelho **não** inic
 
 Depois de checks verdes + review aprovada, o LangGraph interrompe novamente. O action mostra worktree, diff stat, review e comandos para inspecionar o código.
 
+Mudança simples / local (ainda no contrato original: layout, popup na tela já planejada, teste dos ACs existentes, copy, rename, bugfix) chama `revise-code` imediatamente, sem sugestão. Sugestão só se a mudança refizer a tarefa ou adicionar outra tarefa. Adição de escopo (pedido original ainda desejado) sugere mergear esta task e iniciar uma nova só com o extra: aceite é `approve-commit` e depois `harness task start`; recusa é `revise-code`. Substituição quase completa do pedido original sugere cancelar sem merge (limpa worktree, branch não mergeada e action) e iniciar uma nova task que replaneja; aceite é `cancel` e depois `start`; recusa é `revise-code`. Não existe comando `restart`.
+
 ```bash
 harness task approve-commit 0001
 ```
 
-ou:
+ou, para ajuste local / recusa de sugestão:
 
 ```bash
 harness task revise-code 0001 "simplifique esse service antes de integrar"
