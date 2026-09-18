@@ -18,15 +18,15 @@ def test_cli_prints_test_barrier_not_commit_on_plan_gate(capsys) -> None:
                 "kind": "human",
                 "gate": "plan",
                 "message": "Revise a solução e a barreira de teste. Este gate não autoriza commit.",
-                "summary": "## Barreira de teste\n\n| Gate | Command |\n| unit | `npm test` |",
+                "summary": "## Plano\n\nAdd login.\n\n## Testes pontuais\n\n### Unit\n- LoginRequest rejects empty email\n",
             },
         },
         json_output=False,
     )
     out = capsys.readouterr().out
     assert "ACTION: human:plan" in out
-    assert "Barreira de teste" in out
-    assert "npm test" in out
+    assert "### Unit" in out
+    assert "LoginRequest" in out
     assert "feat(" not in out
 
 

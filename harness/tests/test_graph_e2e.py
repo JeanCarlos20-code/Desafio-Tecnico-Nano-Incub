@@ -106,17 +106,35 @@ def test_full_graph_plan_execute_review_commit_merge(tmp_path: Path, harness_sou
         )
         (task_dir / "tasks.md").write_text(
             "---\nharness:\n  commit_message: \"feat(reservation): add booking\"\n"
+            "  tests:\n"
+            "    unit:\n      - \"CreateReservation rejects an overlapping slot\"\n"
+            "    integration:\n      - \"POST /reservations persists the booking in MySQL\"\n"
+            "    e2e:\n      - \"Administrator books a room through the real screen\"\n"
             "  gates:\n    - id: unit\n      command: \"python -c 'print(1)'\"\n      required: true\n---\n\n"
-            "# Implementation Plan\n\n## Considered Approaches\n- A: service.\n- B: use case.\n\n"
-            "## Planned Tests\n- UT-001 covers AC-001.\n\n## Required Gates\n- unit\n",
+            "# Implementation Plan\n\n## Summary\nAdd reservation booking.\n\n## Considered Approaches\n- A: service.\n- B: use case.\n\n"
+            "## Planned Tests\n### Unit\n- CreateReservation rejects an overlapping slot\n\n"
+            "### Integration\n- POST /reservations persists the booking in MySQL\n\n"
+            "### E2E\n- Administrator books a room through the real screen\n\n## Required Gates\n- unit\n",
             encoding="utf-8",
         )
         graph.resume(meta, {"kind": "agent_result", "phase": "plan", "status": "success"})
         action = store.read_action(task_id)
         assert action is not None and action.get("gate") == "plan"
         summary = str(action.get("summary") or "")
-        assert "Barreira de teste" in summary
+        assert "## Plano" in summary
+        assert "## Testes pontuais" in summary
+        assert "## Comandos após o Execute" in summary
+        assert summary.index("## Plano") < summary.index("## Testes pontuais")
+        assert summary.index("## Testes pontuais") < summary.index("## Comandos após o Execute")
         assert "feat(reservation): add booking" not in summary
+        assert "CreateReservation rejects an overlapping slot" in summary
+        assert "### Unit" in summary
+        assert "python -c 'print(1)'" in summary.split("## Comandos após o Execute", 1)[1]
+        assert action.get("tests") == {
+            "unit": ["CreateReservation rejects an overlapping slot"],
+            "integration": ["POST /reservations persists the booking in MySQL"],
+            "e2e": ["Administrator books a room through the real screen"],
+        }
         assert action.get("gates") == [
             {"id": "unit", "command": "python -c 'print(1)'", "required": True}
         ]
