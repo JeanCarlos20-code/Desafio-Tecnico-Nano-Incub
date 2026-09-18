@@ -50,7 +50,7 @@ O worker chama `harness task complete-phase` ao terminar. Depois consulte `harne
 Mostre o action nesta ordem:
 
 1. **Plano / tarefa** (`summary` → seção Plano).
-2. **Testes pontuais** (`tests`): o que será testado em **unit**, **integration** e **e2e** (regra de negócio, dado, validação, fluxo).
+2. **Testes pontuais** (`tests`): o que será testado em **unit**, **integration** e **e2e** (regra de negócio, dado, validação, fluxo), classificado segundo `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md`.
 3. **Comandos após o Execute** (`gates` e `stack_verify_required`): o que o Harness vai rodar antes da review, para o humano conferir se não falta comando.
 
 Não monte tabela de commits. Não implemente. Só depois de aprovação explícita rode:
