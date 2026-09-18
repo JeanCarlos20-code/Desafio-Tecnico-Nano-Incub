@@ -36,7 +36,7 @@ Run scripts as `python3 "$SKILL_DIR/scripts/<name>.py"`.
 4. **Do not comment on what checks already catch.** If `php artisan test` or Pint already fail, treat that as a harness check fact, not a prose finding — unless the test was deleted/weakened to hide a regression (that **is** a tests-track finding).
 5. **Specialized tracks do not verdict the task.** They write JSON with `verdict: null`. Only consolidate + `merge_tracks.py` set `APPROVED` / `REJECTED`.
 6. **Gate:** any `blocker` or `high` → `REJECTED` → Execute repair. Only `medium` or zero findings → `APPROVED`, **and only if each clean track proved it judged**: empty `findings` requires at least one `positives` item with `path:line` of a file actually read. Empty findings + empty/unlocated positives → GATE FAIL (the track did not review). The LLM must not override this.
-7. **Round 1 is the whole review.** Later harness loops only check previous blocking ids plus new blocker/high introduced by the repair. Do not open new medium fronts on repair rounds unless they are new blocker/high caused by the fix.
+7. **Round 1 is the whole review of the current dirty set.** Later rounds keep the corpus = current dirty paths ∪ first-review presented paths (including files that are no longer dirty). Do not scan the rest of the repository. Do not open a **new** medium backlog **outside** that union. Revalidate **every previous finding**, including **mediums**, even if they were not required to be fixed — confirm whether each point was actually addressed. Re-run the four-track review on the **current diff files** as well, because round 1 may have missed **new blocker/high**. Blocking ids from the last REJECTED review still must be revalidated when present.
 8. **Portuguese** for `summary`, `problem`, `impact`, `fix`, and `instructions`. Keep ids, paths, severity tokens, and verdicts in English.
 
 ## Severity
@@ -55,11 +55,11 @@ Do not upgrade a preference to high. Do not downgrade a documented blocker in `d
 
 Work only on the harness worktree (or the current git diff if run in Cursor). Classify files as core vs mechanical (lockfiles, generated, `vendor/`, `node_modules/`). Skip mechanical files; list them under `unverified` if needed.
 
-Detect round: if the harness passes previous `blocking_ids`, this is a repair re-review (rule 7).
+Detect round: if the harness packet lists carried first-review paths or previous `blocking_ids`, this is a later round (rule 7). The corpus is current dirty ∪ first-review presented paths.
 
 ### 1. Deterministic checks (facts)
 
-If the harness already ran checks, read their exit codes. Do not re-litigate red tests as architecture opinions.
+If the harness already ran checks, read their exit codes. Do not re-litigate red tests as architecture opinions. Do not paste the command log into `review/review-NN.md`; the harness stores that append-only history as `tests/checks-NN.md` (same numbering as `review-NN.md`).
 
 ### 2. Four tracks (prefer parallel subagents)
 
@@ -136,7 +136,7 @@ All tracks empty findings **with path:line positives** → merge `APPROVED` / `c
 
 ### Repair round
 
-Harness sends previous consolidated JSON. Re-check only those blocking ids plus new blocker/high from the fix diff. Do not add a backlog of new mediums.
+Harness sends previous blocking ids plus current dirty paths and first-review presented paths that are not dirty now. Re-inspect that union. Revalidate every previous finding (including mediums, even if they were not required to be fixed). Re-run the four tracks on the current diff files — round 1 may have missed new blocker/high. Revalidate blocking ids from the last REJECTED review when present. Do not add a **new** medium backlog **outside** the union. Do not scan the rest of the repository.
 
 ## Troubleshooting
 
