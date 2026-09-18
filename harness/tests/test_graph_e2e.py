@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import shutil
+import subprocess
 
 import pytest
 
@@ -147,6 +148,55 @@ def _approve_plan(graph: HarnessGraph, store: TaskStore, meta, task_id: str, tas
     graph.resume(meta, {"kind": "human_decision", "decision": "approve"})
     action = store.read_action(task_id)
     assert action is not None and action.get("phase") == "execute"
+
+
+def _write_approved_review(store: TaskStore, task_id: str) -> Path:
+    review_dir = store.review_dir(task_id, 1)
+    consolidated = review_dir / "consolidated.json"
+    consolidated.write_text(
+        json.dumps(
+            {
+                "track": "consolidated",
+                "summary": "Sem findings bloqueantes.",
+                "verdict": "APPROVED",
+                "findings": [],
+                "unverified": [],
+                "positives": ["AC-001 coberto."],
+                "execute_handoff": {
+                    "action": "complete",
+                    "blocking_ids": [],
+                    "instructions": "complete",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return consolidated
+
+
+def _reach_commit_gate(
+    graph: HarnessGraph,
+    store: TaskStore,
+    meta,
+    task_id: str,
+    worktree: Path,
+    task_dir: Path,
+) -> None:
+    _approve_plan(graph, store, meta, task_id, PLAN_TASKS_GREEN, task_dir)
+    (worktree / "reservation.txt").write_text("created\n", encoding="utf-8")
+    graph.resume(meta, {"kind": "agent_result", "phase": "execute", "status": "success"})
+    consolidated = _write_approved_review(store, task_id)
+    graph.resume(
+        meta,
+        {
+            "kind": "agent_result",
+            "phase": "review",
+            "status": "success",
+            "result": str(consolidated),
+        },
+    )
+    action = store.read_action(task_id)
+    assert action is not None and action.get("gate") == "commit"
 
 
 
@@ -374,6 +424,65 @@ def test_exhausted_check_fix_notifies_human_and_does_not_start_review(
         assert values.get("status") == "needs_human_attention"
         assert values.get("review_round") == 0
         assert store.read_action(task_id) is None or store.read_action(task_id).get("phase") != "review"
+    finally:
+        graph.close()
+
+
+def test_commit_gate_cancel_does_not_merge_and_discards_worktree(
+    tmp_path: Path, harness_source: Path, monkeypatch
+) -> None:
+    graph, store, meta, task_dir, task_id, worktree, root = _boot_graph(
+        tmp_path, harness_source, monkeypatch
+    )
+    try:
+        _reach_commit_gate(graph, store, meta, task_id, worktree, task_dir)
+        target_head = run(root, "git", "rev-parse", "HEAD")
+        graph.resume(meta, {"kind": "human_decision", "decision": "cancel", "message": "replace scope"})
+        values = graph.values(meta)
+        assert values.get("status") == "canceled"
+        assert values.get("phase") == "canceled"
+        assert not worktree.exists()
+        assert not (root / "reservation.txt").exists()
+        assert run(root, "git", "rev-parse", "HEAD") == target_head
+        result = subprocess.run(
+            ["git", "show-ref", "--verify", f"refs/heads/{meta.task_branch}"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert result.returncode != 0
+        assert store.read_action(task_id) is None
+    finally:
+        graph.close()
+
+
+def test_commit_gate_request_changes_routes_to_repair_with_code_feedback(
+    tmp_path: Path, harness_source: Path, monkeypatch
+) -> None:
+    graph, store, meta, task_dir, task_id, worktree, root = _boot_graph(
+        tmp_path, harness_source, monkeypatch
+    )
+    try:
+        _reach_commit_gate(graph, store, meta, task_id, worktree, task_dir)
+        target_head = run(root, "git", "rev-parse", "HEAD")
+        graph.resume(
+            meta,
+            {
+                "kind": "human_decision",
+                "decision": "request_changes",
+                "message": "simplifique o service",
+            },
+        )
+        action = store.read_action(task_id)
+        assert action is not None
+        assert action.get("phase") == "repair"
+        values = graph.values(meta)
+        assert values.get("code_feedback") == "simplifique o service"
+        assert values.get("status") != "canceled"
+        assert worktree.exists()
+        assert run(root, "git", "rev-parse", "HEAD") == target_head
+        assert not (root / "reservation.txt").exists()
     finally:
         graph.close()
 

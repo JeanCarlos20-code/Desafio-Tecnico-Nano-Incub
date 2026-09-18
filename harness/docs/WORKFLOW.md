@@ -30,8 +30,14 @@ REVIEW REJECTED no limite → HITL repair_limit
 REVIEW APPROVED e checks verdes
        ↓
 HITL #2: commit approval
-  ├─ revise → REPAIR → CHECKS → REVIEW só se checks verdes
-  ├─ cancel → CANCELED
+  ├─ local/simple change (layout, planned-screen popup, test for existing ACs) → revise-code immediately, no suggestion → REPAIR → CHECKS → REVIEW só se checks verdes
+  ├─ addition of scope → suggest merge then start a new task
+  │    accept: approve-commit (commit+merge+cleanup) then `harness task start` with the extra request
+  │    refuse: revise-code
+  ├─ replacement of original request → suggest cancel then start a new task that replans
+  │    accept: cancel (no merge; discard worktree, unmerged task branch, and action) then `harness task start`
+  │    refuse: revise-code
+  ├─ cancel → CANCELED (no merge; discard worktree and unmerged task branch)
   └─ approve
        ↓
 COMMIT task branch (skill conventional-commits: type(module), tests split)
