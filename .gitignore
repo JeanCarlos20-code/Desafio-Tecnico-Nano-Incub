@@ -29,6 +29,6 @@ Thumbs.db
 .venv-harness
 __pycache__/
 *.pyc
-**/mcp.json
+**/*mcp.json*
 *.egg-info/
 /.local
