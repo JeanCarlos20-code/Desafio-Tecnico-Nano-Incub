@@ -1,39 +1,40 @@
 # Unit Testing Strategy
 
-Unit tests protect isolated business behavior, input validation, and frontend behavior that can be verified without the real backend or database.
+Unit tests protect isolated backend business behavior, input validation, and isolated frontend behavior.
 
 They must be fast, deterministic, and independent from real infrastructure.
 
 ## Source of truth
 
-This document defines what belongs to the **unit** test level.
+This document defines the **unit test** level for both backend and frontend.
 
 The test reviewer must use this document when evaluating unit-test coverage.
 
 ## Backend — PHP / Laravel
 
-Backend unit tests are mandatory for:
+Backend unit tests are required for:
 
-1. **Use cases / business rules**
-2. **Input validation**
+1. application/use cases;
+2. business rules;
+3. validation for every type of data entering the system.
 
-### Use cases and business rules
+### Application and use cases
 
-Every use case or application operation that contains business decisions must have unit tests for its observable behavior.
+Every use case or application operation containing business decisions must have unit tests for its observable behavior.
 
 Cover, when applicable:
 
 - valid behavior;
 - business-rule rejection;
-- boundary values;
 - calculations;
 - state transitions;
+- relevant boundary values;
 - isolated authorization decisions;
 - relevant error paths.
 
-Use cases must not depend on the real database in unit tests.
+Use cases must not use the real database in unit tests.
 
-Mock or fake only real boundaries required by the use case, such as:
+Mock or fake only real boundaries needed by the use case, such as:
 
 - repository;
 - clock;
@@ -42,6 +43,8 @@ Mock or fake only real boundaries required by the use case, such as:
 - notification gateway.
 
 Do not mock the business rule being tested.
+
+Prefer assertions about observable results rather than internal call order.
 
 ### Input validation
 
@@ -59,7 +62,7 @@ This includes, when applicable:
 - booleans;
 - dates and times;
 - enums or allowed values;
-- nullable / optional values;
+- nullable and optional values;
 - arrays and nested objects;
 - files or file metadata;
 - filters;
@@ -72,14 +75,14 @@ Cover at least:
 - valid values;
 - wrong types;
 - malformed values;
-- minimum and maximum boundaries;
-- invalid allowed values;
 - missing values;
 - invalid nullability;
+- minimum and maximum boundaries;
+- invalid allowed values;
 - invalid nested structures;
 - invalid date/time formats.
 
-For Laravel, validation may live in:
+Validation may be implemented with:
 
 - `FormRequest`;
 - custom validation rules;
@@ -92,24 +95,52 @@ Test the validation contract defined by the project.
 
 ### Database-dependent validation
 
-Validation that requires persisted state is not purely unit-level.
+Validation depending on persisted state is not purely unit-level.
 
 Examples:
 
 - `unique`;
 - `exists`;
-- ownership based on persisted data;
-- validation depending on current database state.
+- ownership based on database state;
+- validation depending on currently persisted records.
 
-Pure validation behavior should remain covered by unit tests.
+The pure input contract remains covered by unit tests.
 
 Database-dependent behavior must also be covered by `integration.md`.
+
+### What backend unit tests must not prove
+
+Do not use unit tests to prove:
+
+- controller wiring;
+- routing;
+- middleware execution;
+- real Eloquent behavior;
+- migrations;
+- MySQL constraints;
+- transactions;
+- locks;
+- database concurrency;
+- complete HTTP behavior.
+
+Those belong to `integration.md` or `e2e.md`.
+
+Do not create artificial unit tests for:
+
+- passive Eloquent Models;
+- routes that only register endpoints;
+- migrations without isolated logic;
+- simple seeders;
+- configuration;
+- constants;
+- getters/setters;
+- framework internals.
 
 ## Frontend — React / TypeScript
 
 React is also covered by unit tests.
 
-Unit tests should protect frontend behavior that can be verified without the real Laravel backend or a real browser workflow.
+For this project, frontend unit tests are the default level for React behavior that can be tested without the real Laravel backend or real MySQL database.
 
 This includes:
 
@@ -117,27 +148,32 @@ This includes:
 - pages in isolation;
 - custom hooks;
 - forms;
-- client-side validation;
+- frontend validation;
 - conditional rendering;
 - loading states;
 - error states;
 - empty states;
 - success states;
-- user interaction;
+- user interactions;
 - reducers;
 - pure functions;
 - formatters;
 - parsers;
-- state transitions;
-- frontend-owned validation.
+- state transitions.
 
-A React unit test may render a component tree and interact with it.
+A React unit test may render a meaningful component tree and interact with it.
 
-The important boundary is that it does **not** require the real backend or real MySQL database.
+The important boundary is:
 
-### Component tests
+```text
+React behavior
+→ real component/hook code
+→ backend/network boundary mocked or controlled
+```
 
-For meaningful React components, test behavior from the user's perspective.
+### Component behavior
+
+Test components from the user's perspective whenever possible.
 
 Prefer assertions such as:
 
@@ -145,30 +181,30 @@ Prefer assertions such as:
 - button can be clicked;
 - form accepts input;
 - validation message appears;
-- loading indicator appears;
+- loading state appears;
 - error state is rendered;
-- successful state is rendered;
+- success state is rendered;
 - conditional content appears or disappears;
-- callback or navigation boundary is invoked correctly.
+- expected navigation/submission boundary is invoked.
 
 Avoid testing:
 
-- internal component state directly;
+- internal state directly;
 - private implementation details;
-- CSS classes unless styling itself is the behavior;
-- framework internals.
+- framework internals;
+- CSS classes unless visual styling itself is the behavior.
 
 ### React Testing Library
 
-If React Testing Library is configured, prefer semantic queries such as:
+If React Testing Library is configured, prefer semantic queries:
 
 - role;
 - label;
 - text.
 
-Avoid relying unnecessarily on:
+Avoid unnecessary dependence on:
 
-- internal DOM structure;
+- DOM implementation details;
 - CSS selectors;
 - `data-testid` everywhere.
 
@@ -178,7 +214,7 @@ Avoid relying unnecessarily on:
 
 Mock only external boundaries needed by the test, such as:
 
-- HTTP/backend client;
+- backend/HTTP client;
 - Inertia/router boundary;
 - browser API;
 - clock;
@@ -187,32 +223,15 @@ Mock only external boundaries needed by the test, such as:
 
 Do not mock every child component.
 
-The component tree under test should remain meaningful.
+The rendered tree should remain meaningful.
 
 ### Frontend validation
 
-If React performs validation for user experience, test it at unit level.
+If React performs validation for user experience, test that validation at unit level.
 
 Frontend validation never replaces backend validation.
 
 The backend remains authoritative for data entering the system.
-
-## What unit tests must not prove
-
-Do not use unit tests to prove:
-
-- real controller wiring;
-- real Laravel middleware;
-- real Eloquent behavior;
-- migrations;
-- MySQL constraints;
-- real transactions;
-- locks;
-- database concurrency;
-- complete PHP ↔ React integration;
-- real browser workflows.
-
-Those belong to integration or E2E tests.
 
 ## Mocking rules
 
@@ -230,7 +249,7 @@ Good examples:
 Avoid:
 
 - mocking the use case being tested;
-- mocking validation logic to make a test pass;
+- mocking validation logic only to make the test pass;
 - mocking every React child component;
 - asserting only internal call order.
 
@@ -255,6 +274,18 @@ Avoid:
 - test-order dependence;
 - uncontrolled randomness.
 
+## Coverage
+
+Unit tests contribute to coverage.
+
+For PHP, the main backend coverage is produced by **Unit + Integration** tests.
+
+For React, unit/component tests are the primary source of frontend coverage.
+
+Do not create trivial tests only to increase coverage.
+
+Coverage does not replace meaningful behavior protection.
+
 ## Existing tests are contracts
 
 Do not weaken a valid existing test only because production code changed.
@@ -267,10 +298,65 @@ Do not:
 - add mocks only to hide a regression;
 - skip failing tests without justification.
 
+When behavior intentionally changes, update tests only after that change is approved.
+
+## CI/CD acceptance rules
+
+Unit verification passes only when all required backend and frontend unit tests succeed.
+
+### Backend
+
+The backend unit gate must satisfy all of the following:
+
+- all required application/use-case tests pass;
+- all required backend validation tests pass;
+- no required unit test is skipped without an approved reason;
+- the configured PHP coverage threshold is met;
+- backend code affected by the task remains within the project coverage policy;
+- failures in required PHP lint or build gates invalidate the verification.
+
+The current project target for backend application coverage is:
+
+```text
+>= 80%
+```
+
+Coverage must be enforced by the configured test/coverage tooling.
+
+A report that only displays coverage without failing below the threshold does not satisfy the CI/CD rule.
+
+### Frontend
+
+The frontend unit gate must satisfy all of the following:
+
+- all required React/TypeScript unit and component tests pass;
+- all required frontend validation and interaction tests pass;
+- no required frontend unit test is skipped without an approved reason;
+- the configured frontend coverage threshold is met;
+- failures in required frontend lint or build gates invalidate the verification.
+
+The current project target for React unit/component coverage is:
+
+```text
+>= 80%
+```
+
+### Incomplete verification
+
+Unit verification is incomplete when:
+
+- required tests did not execute;
+- coverage could not be collected when it is required;
+- the configured threshold was not actually enforced;
+- a required lint/build gate failed;
+- a required dependency for the test environment was unavailable.
+
+Do not report incomplete verification as passed.
+
 ## Final rule
 
 Before creating a unit test, answer:
 
-**Which isolated backend rule, input contract, React behavior, or frontend state transition does this test protect?**
+**Which isolated backend rule, validation contract, React behavior, or frontend state transition does this test protect?**
 
-If there is no clear answer, the test probably does not belong at the unit level.
+If there is no clear answer, the test probably does not belong at unit level.
