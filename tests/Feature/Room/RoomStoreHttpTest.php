@@ -80,9 +80,30 @@ class RoomStoreHttpTest extends TestCase
                 'capacity' => 'abc',
             ])
             ->assertRedirect(route('rooms.create'))
-            ->assertSessionHasErrors(['capacity' => 'Informe a capacidade da sala.']);
+            ->assertSessionHasErrors(['capacity' => 'A capacidade deve ser um número inteiro.']);
 
         $this->assertDatabaseCount('rooms', 0);
+    }
+
+    public function test_store_with_is_active_false_still_persists_is_active_true(): void
+    {
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->from(route('rooms.create'))
+            ->post(route('rooms.store'), [
+                'name' => 'Sala Cinza',
+                'capacity' => 6,
+                'is_active' => false,
+            ])
+            ->assertRedirect(route('rooms.index'))
+            ->assertSessionHas('success', 'Sala criada com sucesso.');
+
+        $this->assertDatabaseHas('rooms', [
+            'name' => 'Sala Cinza',
+            'capacity' => 6,
+            'is_active' => 1,
+        ]);
     }
 
     public function test_store_ignores_extra_fields_such_as_location(): void
