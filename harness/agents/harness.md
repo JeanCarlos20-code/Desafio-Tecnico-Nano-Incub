@@ -80,7 +80,11 @@ Não trate silêncio, "ok", "segue" ambíguo ou ausência de resposta como aprov
 
 ### `gate=repair_limit`
 
-O loop automático atingiu o limite. Pergunte ao usuário. `retry-repair` autoriza mais uma rodada; `stop-repair` encerra em `needs_human_attention`.
+O loop de **review-repair** atingiu o limite. Pergunte ao usuário. `retry-repair` autoriza mais uma rodada; `stop-repair` encerra em `needs_human_attention`.
+
+### `gate=check_fail_limit`
+
+O Repair não conseguiu deixar os checks obrigatórios verdes. Avise o usuário. A Review **não** começa. `retry-repair` zera `check_fix_round` e volta ao Repair; `stop-repair` encerra em `needs_human_attention`.
 
 ## Git
 
