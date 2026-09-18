@@ -230,10 +230,19 @@ class HarnessGraph:
             "gate": "plan",
             "task_id": meta.task_id,
             "message": (
-                "Revise a solução e a barreira de teste antes de liberar implementação. "
+                "Revise, nesta ordem: o plano, os testes pontuais (unit / integration / e2e) "
+                "e os comandos que rodam depois do Execute e antes da review. "
                 "Este gate não autoriza commit."
             ),
             "summary": self.artifacts.plan_barrier_summary(task_dir),
+            "tests": {
+                "unit": list(plan.planned_tests.unit),
+                "integration": list(plan.planned_tests.integration),
+                "e2e": list(plan.planned_tests.e2e),
+            },
+            "tests_not_applicable": {
+                level: reason for level, reason in plan.planned_tests.skipped
+            },
             "gates": [
                 {"id": item.id, "command": item.command, "required": item.required}
                 for item in plan.gates

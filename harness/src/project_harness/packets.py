@@ -62,7 +62,9 @@ Prioridade global existente: {', '.join(f'`{item}`' for item in hints) if hints 
 
 Use SPECIFY + TASKS. DESIGN não é obrigatório neste MVP; só use conceitos de design dentro do plano quando a complexidade realmente exigir, sem criar um agente de arquitetura.
 
-- `harness/skills/conventional-commits/SKILL.md` — preencha `harness.commits` no frontmatter (um commit por módulo; testes separados). O **gate humano do PLAN** apresenta a barreira de teste (`harness.gates` + stack verify), **não** a lista de commits. Commits só entram no segundo gate, depois de checks e review. Não peça e não faça commit nesta fase.
+- `harness/skills/conventional-commits/SKILL.md` — preencha `harness.commits` no frontmatter (um commit por módulo; testes separados). O **gate humano do PLAN** apresenta, nesta ordem: o plano, `harness.tests` (unit / integration / e2e, testes pontuais) e `harness.gates` + stack verify (comandos depois do Execute, antes da review). **Não** apresenta a lista de commits. Commits só entram no segundo gate. Não peça e não faça commit nesta fase.
+
+Leia `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` e classifique cada teste pontual nesses níveis. Cada item deve dizer **o comportamento protegido**, não o comando que roda a suíte.
 
 ## Artefatos em `.specs/` (inglês)
 
@@ -108,6 +110,13 @@ harness:
   commits:
     - "feat(scope): English imperative description"
     - "test(scope): cover the same behavior"
+  tests:
+    unit:
+      - "LoginRequest rejects empty email"
+    integration:
+      - "POST /login with valid credentials regenerates the session"
+    e2e:
+      - "Administrator submits the login screen and reaches /reservations"
   gates:
     - id: unit
       command: "comando real do projeto"
@@ -123,6 +132,9 @@ Depois o corpo em inglês:
 ## Affected Components
 ## Tasks
 ## Planned Tests
+### Unit
+### Integration
+### E2E
 ## Required Gates
 ## Definition of Done
 ```
@@ -239,7 +251,7 @@ Atualize `{task_dir / 'validation.md'}` em inglês, com:
 ## Regras
 
 1. Trabalhe somente nesta worktree.
-2. Testes derivam da spec; não enfraqueça/remova testes válidos para ficar verde.
+2. Testes derivam da spec e de `harness.tests`; crie um teste pontual para cada item no nível unit / integration / e2e. Não enfraqueça/remova testes válidos para ficar verde.
 3. Prefira testes antes ou junto da implementação conforme a skill TLC.
 4. O `tasks.md` indica áreas esperadas, não é uma allowlist policialesca. Se um arquivo extra for necessário por dependência concreta, pode alterá-lo e registre a razão em `validation.md`.
 5. Não faça scope creep / "while I'm here".

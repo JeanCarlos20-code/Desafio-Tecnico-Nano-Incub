@@ -15,10 +15,19 @@ from .utils import as_bool, as_list, as_object, as_str, estimate_tokens, parse_f
 
 
 @dataclass(frozen=True)
+class PlannedTests:
+    unit: tuple[str, ...]
+    integration: tuple[str, ...]
+    e2e: tuple[str, ...]
+    skipped: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
 class PlanData:
     gates: tuple[GateSpec, ...]
     commit_message: str
     commits: tuple[str, ...]
+    planned_tests: PlannedTests
     tests_not_applicable_reason: str
     warnings: tuple[str, ...]
 
@@ -65,6 +74,12 @@ TEMPLATES = {
 ## Tasks
 
 ## Planned Tests
+
+### Unit
+
+### Integration
+
+### E2E
 
 ## Required Gates
 
@@ -116,6 +131,12 @@ REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 """
 REVIEW_DIRNAME = "review"
 REVIEW_FILE_RE = re.compile(r"^review-(\d{2,})\.md$")
+TEST_LEVELS = ("unit", "integration", "e2e")
+RUNNER_COMMAND_RE = re.compile(
+    r"^(npm\s|npx\s|yarn\s|pnpm\s|php\s+artisan\s|vendor/bin/|pytest\b|"
+    r"python\s+-m\s+pytest|composer\s)",
+    re.I,
+)
 
 
 class ArtifactService:
@@ -202,6 +223,9 @@ class ArtifactService:
             raise HarnessError("spec.md must contain an Acceptance Criteria heading.")
         if not _has_heading(tasks, "Planned Tests"):
             raise HarnessError("tasks.md must contain a Planned Tests heading.")
+        for title in ("Unit", "Integration", "E2E"):
+            if not _has_heading(tasks, title):
+                raise HarnessError(f"tasks.md Planned Tests must contain a {title} heading.")
         if not _has_heading(tasks, "Required Gates"):
             raise HarnessError("tasks.md must contain a Required Gates heading.")
 
@@ -227,6 +251,7 @@ class ArtifactService:
             raise HarnessError(
                 "tasks.md must declare at least one gate or tests_not_applicable_reason."
             )
+        planned_tests = _parse_planned_tests(harness)
         commit_messages = _commit_messages(harness)
         if not commit_messages:
             raise HarnessError(
@@ -252,6 +277,7 @@ class ArtifactService:
             gates=tuple(gates),
             commit_message=commit_message,
             commits=commit_messages,
+            planned_tests=planned_tests,
             tests_not_applicable_reason=no_tests_reason,
             warnings=tuple(warnings),
         )
@@ -268,12 +294,48 @@ class ArtifactService:
 
     def plan_barrier_summary(self, task_dir: Path) -> str:
         plan = self.validate_plan(task_dir)
-        lines = [
-            "## Barreira de teste",
-            "",
-            "Este gate libera implementação. Execute não comita. Commits só depois do segundo gate humano.",
-            "",
-        ]
+        skipped = dict(plan.planned_tests.skipped)
+        tasks = (task_dir / "tasks.md").read_text(encoding="utf-8")
+        spec = (task_dir / "spec.md").read_text(encoding="utf-8")
+        lines = ["## Plano", ""]
+        summary = _section_body(tasks, "Summary")
+        if summary:
+            lines.extend([summary, ""])
+        selected = _section_body(tasks, "Selected Approach")
+        if selected:
+            lines.extend(["### Selected Approach", "", selected, ""])
+        goal = _section_body(spec, "Goal")
+        if goal:
+            lines.extend(["### Goal", "", goal, ""])
+        if len(lines) == 2:
+            lines.extend(["See spec.md and tasks.md in the worktree.", ""])
+        lines.extend(
+            [
+                "## Testes pontuais",
+                "",
+                "O Execute deve criar estes testes, classificados por nível "
+                "(`docs/test/unit.md`, `docs/test/integration.md`, `docs/test/e2e.md`).",
+                "",
+            ]
+        )
+        titles = {"unit": "Unit", "integration": "Integration", "e2e": "E2E"}
+        for level in TEST_LEVELS:
+            lines.extend([f"### {titles[level]}", ""])
+            items = getattr(plan.planned_tests, level)
+            if items:
+                for item in items:
+                    lines.append(f"- {item}")
+            else:
+                lines.append(f"- not applicable: {skipped[level]}")
+            lines.append("")
+        lines.extend(
+            [
+                "## Comandos após o Execute",
+                "",
+                "Rodam depois do Execute e antes da review. Confira se não falta comando.",
+                "",
+            ]
+        )
         if plan.gates:
             lines.extend(
                 [
@@ -284,28 +346,21 @@ class ArtifactService:
             for gate in plan.gates:
                 required = "yes" if gate.required else "no"
                 lines.append(f"| {gate.id} | `{gate.command}` | {required} |")
+            lines.append("")
         elif plan.tests_not_applicable_reason:
-            lines.append(plan.tests_not_applicable_reason)
+            lines.extend([plan.tests_not_applicable_reason, ""])
         verify_ids = self.config.verify.required
         if verify_ids:
             ids = ", ".join(f"`{item}`" for item in verify_ids)
             lines.extend(
                 [
+                    "### Stack verify",
                     "",
-                    "## Stack verify",
+                    "O Harness também roda estes command IDs do `harness/stack.yml` "
+                    f"nos componentes afetados: {ids}.",
                     "",
-                    "Depois do Execute, o Harness também roda estes command IDs do "
-                    f"`harness/stack.yml` nos componentes afetados: {ids}.",
-                    "Eles entram na barreira de teste e podem bloquear repair mesmo "
-                    "quando a review não tem blocker/high.",
                 ]
             )
-        planned = _section_body((task_dir / "tasks.md").read_text(encoding="utf-8"), "Planned Tests")
-        if planned:
-            lines.extend(["", "## Planned Tests", "", planned])
-        goal = _section_body((task_dir / "spec.md").read_text(encoding="utf-8"), "Goal")
-        if goal:
-            lines.extend(["", "## Goal", "", goal])
         return "\n".join(lines).strip() + "\n"
 
     def append_validation_checks(self, task_dir: Path, rendered: str) -> None:
@@ -322,6 +377,72 @@ class ArtifactService:
             "<!-- harness-checks:end -->\n"
         )
         path.write_text(existing.rstrip() + "\n\n" + block, encoding="utf-8")
+
+
+def _parse_planned_tests(harness: JSONObject) -> PlannedTests:
+    raw = harness.get("tests")
+    if not isinstance(raw, dict):
+        raise HarnessError(
+            "tasks.md must declare harness.tests with unit, integration, and e2e lists "
+            "of punctual behaviors to protect."
+        )
+    skipped_raw = harness.get("tests_not_applicable")
+    skipped_map: dict[str, str] = {}
+    if isinstance(skipped_raw, dict):
+        for key, value in skipped_raw.items():
+            if key in TEST_LEVELS and isinstance(value, str) and value.strip():
+                skipped_map[str(key)] = value.strip()
+    elif skipped_raw is not None:
+        raise HarnessError("tasks.md harness.tests_not_applicable must be a mapping of level to reason.")
+    levels: dict[str, tuple[str, ...]] = {}
+    skipped: list[tuple[str, str]] = []
+    for level in TEST_LEVELS:
+        if level not in raw:
+            raise HarnessError(f"tasks.md harness.tests must include '{level}'.")
+        items = _punctual_list(raw.get(level), level)
+        reason = skipped_map.get(level, "")
+        if items and reason:
+            raise HarnessError(
+                f"tasks.md harness.tests.{level} already lists tests; "
+                f"do not also set tests_not_applicable.{level}."
+            )
+        if not items:
+            if not reason:
+                raise HarnessError(
+                    f"tasks.md harness.tests.{level} must list punctual behaviors, "
+                    f"or tests_not_applicable.{level} must explain the skip."
+                )
+            skipped.append((level, reason))
+        levels[level] = items
+    return PlannedTests(
+        unit=levels["unit"],
+        integration=levels["integration"],
+        e2e=levels["e2e"],
+        skipped=tuple(skipped),
+    )
+
+
+def _punctual_list(raw: object, level: str) -> tuple[str, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise HarnessError(f"tasks.md harness.tests.{level} must be a list of strings.")
+    items: list[str] = []
+    for index, item in enumerate(raw, start=1):
+        text = ""
+        if isinstance(item, str):
+            text = item.strip()
+        elif isinstance(item, dict):
+            text = as_str(item.get("protects")).strip() or as_str(item.get("behavior")).strip()
+        if not text:
+            raise HarnessError(f"tasks.md harness.tests.{level}[{index}] is empty.")
+        if RUNNER_COMMAND_RE.search(text):
+            raise HarnessError(
+                f"tasks.md harness.tests.{level}[{index}] must describe the behavior to protect, "
+                "not a runner command."
+            )
+        items.append(text)
+    return tuple(items)
 
 
 def _commit_messages(harness: JSONObject) -> tuple[str, ...]:
