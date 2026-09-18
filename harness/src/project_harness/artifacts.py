@@ -100,6 +100,8 @@ REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 
 ## Summary
 
+## Deterministic checks
+
 ## Blockers
 
 ## High
@@ -109,6 +111,8 @@ REVIEW_TEMPLATE = """🤖 AI Code Review (S)
 ## Positive Findings
 
 ## Verdict
+
+## Harness gate
 """
 REVIEW_DIRNAME = "review"
 REVIEW_FILE_RE = re.compile(r"^review-(\d{2,})\.md$")
@@ -262,6 +266,48 @@ class ArtifactService:
             return joined[:max_chars] + "\n\n... summary truncated; see the full files in the worktree ..."
         return joined
 
+    def plan_barrier_summary(self, task_dir: Path) -> str:
+        plan = self.validate_plan(task_dir)
+        lines = [
+            "## Barreira de teste",
+            "",
+            "Este gate libera implementação. Execute não comita. Commits só depois do segundo gate humano.",
+            "",
+        ]
+        if plan.gates:
+            lines.extend(
+                [
+                    "| Gate | Command | Required |",
+                    "| ---- | ------- | -------- |",
+                ]
+            )
+            for gate in plan.gates:
+                required = "yes" if gate.required else "no"
+                lines.append(f"| {gate.id} | `{gate.command}` | {required} |")
+        elif plan.tests_not_applicable_reason:
+            lines.append(plan.tests_not_applicable_reason)
+        verify_ids = self.config.verify.required
+        if verify_ids:
+            ids = ", ".join(f"`{item}`" for item in verify_ids)
+            lines.extend(
+                [
+                    "",
+                    "## Stack verify",
+                    "",
+                    "Depois do Execute, o Harness também roda estes command IDs do "
+                    f"`harness/stack.yml` nos componentes afetados: {ids}.",
+                    "Eles entram na barreira de teste e podem bloquear repair mesmo "
+                    "quando a review não tem blocker/high.",
+                ]
+            )
+        planned = _section_body((task_dir / "tasks.md").read_text(encoding="utf-8"), "Planned Tests")
+        if planned:
+            lines.extend(["", "## Planned Tests", "", planned])
+        goal = _section_body((task_dir / "spec.md").read_text(encoding="utf-8"), "Goal")
+        if goal:
+            lines.extend(["", "## Goal", "", goal])
+        return "\n".join(lines).strip() + "\n"
+
     def append_validation_checks(self, task_dir: Path, rendered: str) -> None:
         path = task_dir / "validation.md"
         existing = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -298,3 +344,13 @@ def _commit_messages(harness: JSONObject) -> tuple[str, ...]:
 
 def _has_heading(text: str, title: str) -> bool:
     return bool(re.search(rf"(?im)^#{{1,4}}\s+{re.escape(title)}\s*$", text))
+
+
+def _section_body(text: str, title: str) -> str:
+    match = re.search(rf"(?im)^#{{1,4}}\s+{re.escape(title)}\s*$", text)
+    if match is None:
+        return ""
+    start = match.end()
+    next_heading = re.search(r"(?m)^#{1,4}\s+", text[start:])
+    body = text[start : start + next_heading.start()] if next_heading else text[start:]
+    return body.strip()

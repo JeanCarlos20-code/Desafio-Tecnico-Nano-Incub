@@ -158,6 +158,9 @@ def _print_payload(payload: JSONObject, *, json_output: bool) -> None:
             summary = as_str(action_raw.get("summary"))
             if summary:
                 print("\n" + summary)
+            check_summary = as_str(action_raw.get("check_summary"))
+            if check_summary:
+                print("\nBarreira de teste:\n" + check_summary)
             diff_stat = as_str(action_raw.get("diff_stat"))
             if diff_stat:
                 print("\nDiff stat:\n" + diff_stat)

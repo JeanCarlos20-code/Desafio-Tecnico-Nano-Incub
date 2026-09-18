@@ -62,7 +62,7 @@ Prioridade global existente: {', '.join(f'`{item}`' for item in hints) if hints 
 
 Use SPECIFY + TASKS. DESIGN não é obrigatório neste MVP; só use conceitos de design dentro do plano quando a complexidade realmente exigir, sem criar um agente de arquitetura.
 
-- `harness/skills/conventional-commits/SKILL.md` — preencha `harness.commits` no frontmatter (um commit por módulo; testes separados).
+- `harness/skills/conventional-commits/SKILL.md` — preencha `harness.commits` no frontmatter (um commit por módulo; testes separados). O **gate humano do PLAN** apresenta a barreira de teste (`harness.gates` + stack verify), **não** a lista de commits. Commits só entram no segundo gate, depois de checks e review. Não peça e não faça commit nesta fase.
 
 ## Artefatos em `.specs/` (inglês)
 
@@ -282,7 +282,7 @@ Comece por:
 
 Não herde conversa do Executor. Leia arquivos alterados e contexto adjacente apenas para verificar evidência.
 
-O harness grava cada rodada em `{task_dir / 'review' / 'review-NN.md'}` (append-only; nunca substitui `review-01.md`, `review-02.md`, ...). O markdown humano usa Summary, Blockers, High, Medium, Positive Findings e Verdict.
+O harness grava cada rodada em `{task_dir / 'review' / 'review-NN.md'}` (append-only; nunca substitui `review-01.md`, `review-02.md`, ...). O markdown humano usa Summary, Deterministic checks, Blockers, High, Medium, Positive Findings, Verdict (da review consolidada, sem substituir por checks) e Harness gate.
 
 ## Checks determinísticos
 
