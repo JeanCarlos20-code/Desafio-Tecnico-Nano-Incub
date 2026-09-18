@@ -1,0 +1,13 @@
+id: cursor
+display_name: Cursor
+agent_mode: cursor
+agent_dir: .cursor/agents
+skill_dirs:
+  - .cursor/skills
+instruction_mode: cursor-rule
+mcp:
+  mode: project-json
+  path: .cursor/mcp.json
+  style: cursor
+  root_key: mcpServers
+  env_syntax: "${env:%s}"

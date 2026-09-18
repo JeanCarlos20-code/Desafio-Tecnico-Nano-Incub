@@ -3,12 +3,14 @@
 .env
 .env.backup
 .env.production
+.env.mcp
 .phpactor.json
 .phpunit.result.cache
 /.fleet
 /.idea
 /.nova
 /.phpunit.cache
+/coverage
 /.vscode
 /.zed
 /auth.json
@@ -22,4 +24,11 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-/harness
+.harness-manifest.json
+.venv
+.venv-harness
+__pycache__/
+*.pyc
+**/mcp.json
+*.egg-info/
+/.local

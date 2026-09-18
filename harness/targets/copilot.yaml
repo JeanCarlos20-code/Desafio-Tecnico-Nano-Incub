@@ -1,0 +1,13 @@
+id: copilot
+display_name: GitHub Copilot
+agent_mode: copilot
+agent_dir: .github/agents
+skill_dirs:
+  - .github/skills
+instruction_mode: copilot
+mcp:
+  mode: export-json
+  export_path: harness/generated/copilot-cloud-mcp.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"

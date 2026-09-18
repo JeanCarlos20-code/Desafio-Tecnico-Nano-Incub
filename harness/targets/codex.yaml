@@ -1,0 +1,12 @@
+id: codex
+display_name: Codex
+agent_mode: skill
+agent_dir: .agents/skills
+skill_dirs:
+  - .agents/skills
+instruction_mode: agents-md
+mcp:
+  mode: export-toml
+  export_path: harness/generated/codex-mcp.toml
+  style: codex
+  env_syntax: "${%s}"

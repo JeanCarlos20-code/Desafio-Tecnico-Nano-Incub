@@ -1,0 +1,103 @@
+project:
+  name: painel-administrativo
+  type: monolith
+
+  languages:
+    - php
+    - typescript
+
+  frameworks:
+    - laravel
+    - inertia
+    - react
+
+  data_access:
+    - eloquent
+
+  testing:
+    - phpunit
+    - vitest
+    - playwright
+
+components:
+  - name: app
+    root: .
+
+    languages:
+      - php
+      - typescript
+
+    frameworks:
+      - laravel
+      - inertia
+      - react
+
+    data_access:
+      - eloquent
+
+    testing:
+      - phpunit
+      - vitest
+      - playwright
+
+    commands:
+      test:
+        command: php artisan test
+
+      unit:
+        command: php artisan test --testsuite=Unit --coverage --min=80
+
+      integration:
+        command: php artisan test --testsuite=Feature
+
+      frontend:
+        command: npm run test:coverage
+
+      e2e:
+        command: npx playwright test
+
+      lint:
+        command: vendor/bin/pint --test
+
+      frontend_lint:
+        command: npm run lint
+
+      php_build:
+        command: composer run build
+
+      frontend_build:
+        command: npm run build
+
+  - name: harness
+    root: harness
+
+    languages:
+      - python
+
+    frameworks: []
+
+    data_access: []
+
+    testing:
+      - pytest
+
+    commands:
+      test:
+        command: python3 -m pytest tests -q
+
+      unit:
+        command: python3 -m pytest tests -q --ignore=tests/test_graph_e2e.py
+
+      lint:
+        command: python3 -m compileall -q src
+
+      build:
+        command: PYTHONPATH=src python3 -c "import project_harness"
+
+infrastructure:
+  databases:
+    - mysql
+
+  cache: []
+
+  queues: []

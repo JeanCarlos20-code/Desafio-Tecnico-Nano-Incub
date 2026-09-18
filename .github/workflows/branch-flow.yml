@@ -1,0 +1,38 @@
+name: Validate branch flow
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  branch-flow:
+    name: Branch flow
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate source and target branches
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        shell: bash
+        run: |
+          echo "Validando fluxo: $HEAD_BRANCH -> $BASE_BRANCH"
+
+          if [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" != "develop" ]]; then
+            echo "::error::A main só aceita pull requests vindos da develop."
+            exit 1
+          fi
+
+          if [[ "$BASE_BRANCH" == "develop" ]]; then
+            if [[ "$HEAD_BRANCH" == "main" || "$HEAD_BRANCH" == "develop" ]]; then
+              echo "::error::A develop só aceita pull requests vindos de branches de trabalho."
+              exit 1
+            fi
+          fi
+
+          echo "Fluxo de branches permitido."
