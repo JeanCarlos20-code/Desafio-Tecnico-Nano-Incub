@@ -37,6 +37,7 @@ class RoomUpdateHttpTest extends TestCase
                 ->where('room.name', 'Sala Azul')
                 ->where('room.capacity', 10)
                 ->where('room.is_active', false)
+                ->where('has_registered_meetings', false)
             );
     }
 
@@ -90,6 +91,32 @@ class RoomUpdateHttpTest extends TestCase
             'name' => 'Sala Azul',
             'capacity' => 10,
             'is_active' => 1,
+        ]);
+    }
+
+    public function test_update_without_is_active_keeps_the_stored_is_active(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create([
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.edit', $room))
+            ->put(route('rooms.update', $room), [
+                'name' => 'Sala Verde',
+                'capacity' => 20,
+            ])
+            ->assertRedirect(route('rooms.index'))
+            ->assertSessionHas('success', 'Sala atualizada com sucesso.');
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'name' => 'Sala Verde',
+            'capacity' => 20,
+            'is_active' => 0,
         ]);
     }
 }

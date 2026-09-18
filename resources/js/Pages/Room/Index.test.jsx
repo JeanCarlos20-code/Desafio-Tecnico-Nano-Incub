@@ -72,15 +72,17 @@ beforeEach(() => {
 });
 
 describe('Room/Index', () => {
-    it('shows ID, name, capacity, Ativa/Inativa text, DD/MM/YYYY date, edit and delete actions', () => {
+    it('shows name, capacity, Ativa/Inativa text, DD/MM/YYYY date, edit and delete actions, and does not display the room id', () => {
         render(<Index rooms={sampleRooms} />);
 
-        expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument();
+        expect(screen.queryByRole('columnheader', { name: 'ID' })).not.toBeInTheDocument();
+        expect(screen.queryByText('id-1')).not.toBeInTheDocument();
+        expect(screen.queryByText('id-2')).not.toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Nome' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Capacidade' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Criada em' })).toBeInTheDocument();
-        expect(screen.getAllByText('id-1').length).toBeGreaterThan(0);
+        expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
         expect(screen.getAllByText('Sala Azul').length).toBeGreaterThan(0);
         expect(screen.getAllByText('10').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Ativa').length).toBeGreaterThan(0);
@@ -92,6 +94,32 @@ describe('Room/Index', () => {
         );
         expect(screen.getAllByRole('button', { name: 'Excluir Sala Azul' }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole('link', { name: 'Nova sala' })[0]).toHaveAttribute('href', '/rooms/create');
+    });
+
+    it('keeps compact columns from stretching and allows horizontal table scroll', () => {
+        const { container } = render(<Index rooms={sampleRooms} />);
+
+        const table = container.querySelector('table');
+        const scrollRegion = table.parentElement;
+        const desktopSurface = scrollRegion.parentElement;
+        const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' });
+        const nameHeader = screen.getByRole('columnheader', { name: 'Nome' });
+        const mobileList = container.querySelector('ul');
+
+        expect(table.className).toMatch(/\bw-full\b/);
+        expect(table.className).toMatch(/table-auto/);
+        expect(scrollRegion.className).toMatch(/overflow-x-auto/);
+        expect(desktopSurface.className).toMatch(/min-w-0/);
+        expect(desktopSurface.className).toMatch(/md:block/);
+        expect(nameHeader.className).toMatch(/min-w-0/);
+        expect(actionsHeader.className).toMatch(/\bw-0\b/);
+        expect(actionsHeader.className).toMatch(/whitespace-nowrap/);
+        expect(actionsHeader.className).toMatch(/text-right/);
+        expect(screen.getByRole('columnheader', { name: 'Capacidade' }).className).toMatch(/whitespace-nowrap/);
+        expect(screen.getByRole('columnheader', { name: 'Status' }).className).toMatch(/whitespace-nowrap/);
+        expect(screen.getByRole('columnheader', { name: 'Criada em' }).className).toMatch(/whitespace-nowrap/);
+        expect(mobileList.className).toMatch(/md:hidden/);
+        expect(screen.queryByRole('columnheader', { name: 'ID' })).not.toBeInTheDocument();
     });
 
     it('shows the empty state and Nova sala when there are no rooms', () => {

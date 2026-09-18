@@ -45,10 +45,13 @@ components:
         command: php artisan test && npm run test
 
       unit:
-        command: php artisan test --testsuite=Unit --coverage --min=80 && npm run test:coverage
+        command: php artisan test --testsuite=Unit --coverage --min=80
 
       integration:
         command: php artisan test --testsuite=Feature
+
+      frontend:
+        command: npm run test:coverage
 
       e2e:
         command: npx playwright test

@@ -4,6 +4,8 @@ namespace Tests\Feature\Room;
 
 use App\Modules\Room\Infra\Database\Models\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -51,5 +53,24 @@ class RoomSchemaTest extends TestCase
         $this->assertNotNull($room->deleted_at);
         $this->assertNull(Room::query()->find($room->id));
         $this->assertNotNull(Room::withTrashed()->find($room->id));
+    }
+
+    public function test_rooms_is_active_mysql_column_default_is_boolean_true(): void
+    {
+        $column = collect(Schema::getColumns('rooms'))->firstWhere('name', 'is_active');
+
+        $this->assertNotNull($column);
+        $this->assertTrue(in_array($column['default'], [true, 1, '1'], true), 'Expected is_active default true');
+
+        $id = (string) Str::uuid();
+        DB::table('rooms')->insert([
+            'id' => $id,
+            'name' => 'Sala Default',
+            'capacity' => 4,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertTrue((bool) DB::table('rooms')->where('id', $id)->value('is_active'));
     }
 }

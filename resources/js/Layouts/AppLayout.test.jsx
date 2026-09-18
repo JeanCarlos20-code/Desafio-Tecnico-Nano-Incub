@@ -1,9 +1,10 @@
 import { createElement } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm, usePage } from '@inertiajs/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+import { FLASH_TOAST_DURATION_MS } from '../Components/FlashToast';
 import AppLayout from './AppLayout';
 
 vi.mock('@inertiajs/react', () => ({
@@ -32,6 +33,7 @@ function mockPage({ url = '/rooms', name = 'Ada Lovelace', flash = { success: nu
 
 afterEach(() => {
     cleanup();
+    vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -153,5 +155,66 @@ describe('AppLayout admin shell', () => {
 
         expect(form.post).toHaveBeenCalledTimes(1);
         expect(form.post).toHaveBeenCalledWith('/logout', expect.any(Object));
+    });
+
+    it('shows create and update Inertia flashes as the same corner toast', () => {
+        mockPage({ flash: { success: 'Sala criada com sucesso.', error: null } });
+
+        const { unmount } = render(
+            <AppLayout>
+                <p>Child content</p>
+            </AppLayout>,
+        );
+
+        const created = screen.getByRole('status');
+        expect(created).toHaveTextContent('Sala criada com sucesso.');
+        expect(created).toHaveAttribute('aria-live', 'polite');
+        expect(created.className).toMatch(/\bfixed\b/);
+        expect(created.className).toMatch(/bottom-4/);
+        expect(created.className).not.toMatch(/top-4/);
+        expect(created.className).toMatch(/right-4/);
+        expect(created.className).toMatch(/bg-blue-600/);
+        expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
+
+        unmount();
+        mockPage({ flash: { success: 'Sala atualizada com sucesso.', error: null } });
+        render(
+            <AppLayout>
+                <p>Child content</p>
+            </AppLayout>,
+        );
+
+        const updated = screen.getByRole('status');
+        expect(updated).toHaveTextContent('Sala atualizada com sucesso.');
+        expect(updated.className).toMatch(/\bfixed\b/);
+        expect(updated.className).toMatch(/bottom-4/);
+        expect(updated.className).toMatch(/right-4/);
+        expect(updated.className).toMatch(/bg-blue-600/);
+    });
+
+    it('auto-dismisses the Inertia success flash after a few seconds', () => {
+        vi.useFakeTimers();
+        mockPage({ flash: { success: 'Sala atualizada com sucesso.', error: null } });
+
+        render(
+            <AppLayout>
+                <p>Child content</p>
+            </AppLayout>,
+        );
+
+        expect(screen.getByText('Sala atualizada com sucesso.')).toBeInTheDocument();
+
+        act(() => {
+            vi.advanceTimersByTime(FLASH_TOAST_DURATION_MS - 1);
+        });
+
+        expect(screen.getByText('Sala atualizada com sucesso.')).toBeInTheDocument();
+
+        act(() => {
+            vi.advanceTimersByTime(1);
+        });
+
+        expect(screen.queryByText('Sala atualizada com sucesso.')).not.toBeInTheDocument();
+        vi.useRealTimers();
     });
 });

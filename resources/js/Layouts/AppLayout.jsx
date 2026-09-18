@@ -1,5 +1,6 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import FlashToast from '../Components/FlashToast';
 import { logout } from '../Services/session';
 
 function initialsFromName(name) {
@@ -28,7 +29,6 @@ export default function AppLayout({ children, title }) {
     const form = useForm({});
     const [menuOpen, setMenuOpen] = useState(false);
     const [navOpen, setNavOpen] = useState(false);
-    const [flashDismissed, setFlashDismissed] = useState(false);
 
     const userName = page.props?.auth?.user?.name ?? '';
     const flash = page.props?.flash ?? {};
@@ -36,7 +36,7 @@ export default function AppLayout({ children, title }) {
     const onRooms = currentPath === '/rooms' || currentPath.startsWith('/rooms/');
     const onReservations = currentPath === '/reservations' || currentPath.startsWith('/reservations/');
     const initials = useMemo(() => initialsFromName(userName), [userName]);
-    const flashMessage = flashDismissed ? null : flash.success || flash.error;
+    const flashMessage = flash.success || flash.error;
 
     function submitLogout(event) {
         event.preventDefault();
@@ -124,27 +124,12 @@ export default function AppLayout({ children, title }) {
                 </header>
 
                 <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-                    {flashMessage ? (
-                        <div
-                            role="status"
-                            aria-live="polite"
-                            className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm"
-                        >
-                            <span>{flashMessage}</span>
-                            <button
-                                type="button"
-                                onClick={() => setFlashDismissed(true)}
-                                className="text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    ) : null}
-
                     {title ? <h1 className="mb-6 text-2xl font-semibold text-slate-900">{title}</h1> : null}
                     {children}
                 </main>
             </div>
+
+            <FlashToast key={flashMessage || 'flash-empty'} message={flashMessage} />
         </div>
     );
 }

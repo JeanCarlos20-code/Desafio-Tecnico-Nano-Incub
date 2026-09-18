@@ -17,7 +17,7 @@ class StoreRoomRequestTest extends TestCase
         $this->assertSame(['Informe o nome da sala.'], $errors['name']);
     }
 
-    public function test_it_rejects_missing_capacity(): void
+    public function test_it_rejects_missing_capacity_with_informe_a_capacidade_da_sala(): void
     {
         $errors = $this->validationErrors([
             'name' => 'Sala Azul',
@@ -26,35 +26,47 @@ class StoreRoomRequestTest extends TestCase
         $this->assertSame(['Informe a capacidade da sala.'], $errors['capacity']);
     }
 
-    public function test_it_rejects_non_integer_capacity(): void
+    public function test_it_rejects_non_integer_capacity_with_a_capacidade_deve_ser_um_numero_inteiro(): void
     {
         $errors = $this->validationErrors([
             'name' => 'Sala Azul',
             'capacity' => 'doze',
         ]);
 
-        $this->assertSame(['Informe a capacidade da sala.'], $errors['capacity']);
+        $this->assertSame(['A capacidade deve ser um número inteiro.'], $errors['capacity']);
     }
 
-    public function test_it_rejects_capacity_less_than_one(): void
+    public function test_it_rejects_decimal_capacity_as_non_integer(): void
+    {
+        $errors = $this->validationErrors([
+            'name' => 'Sala Azul',
+            'capacity' => 1.5,
+        ]);
+
+        $this->assertSame(['A capacidade deve ser um número inteiro.'], $errors['capacity']);
+    }
+
+    public function test_it_rejects_capacity_less_than_one_with_a_capacidade_deve_ser_de_pelo_menos_1_pessoa(): void
     {
         $errors = $this->validationErrors([
             'name' => 'Sala Azul',
             'capacity' => 0,
         ]);
 
-        $this->assertSame(['A capacidade deve ser no mínimo 1.'], $errors['capacity']);
+        $this->assertSame(['A capacidade deve ser de pelo menos 1 pessoa.'], $errors['capacity']);
     }
 
-    public function test_it_trims_name(): void
+    public function test_it_trims_name_and_excludes_is_active_from_validated_data(): void
     {
         $validated = $this->validated([
             'name' => '  Sala Azul  ',
             'capacity' => 8,
+            'is_active' => false,
         ]);
 
         $this->assertSame('Sala Azul', $validated['name']);
         $this->assertSame(8, $validated['capacity']);
+        $this->assertSame(['name', 'capacity'], array_keys($validated));
     }
 
     /**
