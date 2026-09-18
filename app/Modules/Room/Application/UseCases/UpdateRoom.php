@@ -10,12 +10,14 @@ final class UpdateRoom
 {
     public function __construct(private readonly RoomRepository $rooms) {}
 
-    public function execute(string $id, string $name, int $capacity, bool $isActive): Room
+    public function execute(string $id, string $name, int $capacity, ?bool $isActive = null): Room
     {
-        if ($this->rooms->findById($id) === null) {
+        $existing = $this->rooms->findById($id);
+
+        if ($existing === null) {
             throw new RoomNotFound;
         }
 
-        return $this->rooms->update($id, $name, $capacity, $isActive);
+        return $this->rooms->update($id, $name, $capacity, $isActive ?? $existing->isActive);
     }
 }

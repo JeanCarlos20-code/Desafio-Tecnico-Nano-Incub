@@ -25,6 +25,7 @@ class EditRoomController extends Controller
                 'capacity' => $found->capacity,
                 'is_active' => $found->isActive,
             ],
+            'has_registered_meetings' => false,
         ]);
     }
 }
