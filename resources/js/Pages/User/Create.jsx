@@ -43,7 +43,7 @@ export default function Create() {
     }
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-slate-100 px-6 py-8">
+        <div className="flex min-h-dvh items-center justify-center-safe overflow-x-hidden bg-slate-100 px-6 py-8">
             <div
                 data-layout="register-card"
                 className="mx-auto grid max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl lg:grid-cols-[minmax(0,44%)_minmax(0,56%)]"
