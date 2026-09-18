@@ -20,13 +20,23 @@ def write_valid(task: Path) -> None:
         "---\n"
         "harness:\n"
         "  commit_message: \"feat(auth): add login\"\n"
+        "  tests:\n"
+        "    unit:\n"
+        "      - \"LoginRequest rejects empty email\"\n"
+        "    integration:\n"
+        "      - \"POST /login with valid credentials regenerates the session\"\n"
+        "    e2e:\n"
+        "      - \"Administrator submits the login screen and reaches /reservations\"\n"
         "  gates:\n"
         "    - id: unit\n"
         "      command: \"python -m pytest\"\n"
         "      required: true\n"
         "---\n\n"
-        "# Implementation Plan\n\n## Considered Approaches\n\nA and B; selected A.\n\n"
-        "## Planned Tests\n\nUT-001 covers AC-001.\n\n"
+        "# Implementation Plan\n\n## Summary\n\nAdd native login for the administrator.\n\n"
+        "## Considered Approaches\n\nA and B; selected A.\n\n"
+        "## Planned Tests\n\n### Unit\n\n- LoginRequest rejects empty email\n\n"
+        "### Integration\n\n- POST /login with valid credentials regenerates the session\n\n"
+        "### E2E\n\n- Administrator submits the login screen and reaches /reservations\n\n"
         "## Required Gates\n\npytest.\n",
         encoding="utf-8",
     )
@@ -37,6 +47,9 @@ def test_templates_use_english_headings() -> None:
     assert "## User Stories" in TEMPLATES["spec.md"]
     assert "## Acceptance Criteria" in TEMPLATES["spec.md"]
     assert "## Planned Tests" in TEMPLATES["tasks.md"]
+    assert "### Unit" in TEMPLATES["tasks.md"]
+    assert "### Integration" in TEMPLATES["tasks.md"]
+    assert "### E2E" in TEMPLATES["tasks.md"]
     assert "## Required Gates" in TEMPLATES["tasks.md"]
     assert "## Verdict" in REVIEW_TEMPLATE
     assert "## Deterministic checks" in REVIEW_TEMPLATE
@@ -81,6 +94,13 @@ def test_plan_validation(harness_source: Path, tmp_path: Path) -> None:
     plan = service.validate_plan(task)
     assert plan.commit_message == "feat(auth): add login"
     assert [item.id for item in plan.gates] == ["unit"]
+    assert plan.planned_tests.unit == ("LoginRequest rejects empty email",)
+    assert plan.planned_tests.integration == (
+        "POST /login with valid credentials regenerates the session",
+    )
+    assert plan.planned_tests.e2e == (
+        "Administrator submits the login screen and reaches /reservations",
+    )
 
 
 def test_plan_requires_user_story(harness_source: Path, tmp_path: Path) -> None:
@@ -94,18 +114,51 @@ def test_plan_requires_user_story(harness_source: Path, tmp_path: Path) -> None:
         service.validate_plan(task)
 
 
-def test_plan_barrier_summary_leads_with_gates_not_commits(harness_source: Path, tmp_path: Path) -> None:
+def test_plan_barrier_summary_lists_punctual_tests_by_level(harness_source: Path, tmp_path: Path) -> None:
     config = load_config(harness_source.parent)
     service = ArtifactService(config)
     task = tmp_path / "task"
     task.mkdir()
     write_valid(task)
     text = service.plan_barrier_summary(task)
-    assert text.index("Barreira de teste") < text.index("python -m pytest")
+    assert text.index("## Plano") < text.index("## Testes pontuais")
+    assert text.index("## Testes pontuais") < text.index("## Comandos após o Execute")
+    assert text.index("Add native login for the administrator") < text.index("### Unit")
+    assert text.index("### Unit") < text.index("### Integration") < text.index("### E2E")
+    assert text.index("LoginRequest rejects empty email") < text.index("## Comandos após o Execute")
+    assert "python -m pytest" in text.split("## Comandos após o Execute", 1)[1]
+    assert "`build`" in text.split("## Comandos após o Execute", 1)[1]
     assert "feat(auth): add login" not in text
-    assert "commit_message" not in text
-    assert "Este gate libera implementação" in text
-    assert "UT-001 covers AC-001" in text
-    assert "`test`" in text
-    assert "`lint`" in text
-    assert "`build`" in text
+
+
+def test_plan_rejects_runner_command_as_planned_test(harness_source: Path, tmp_path: Path) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_valid(task)
+    tasks = (task / "tasks.md").read_text(encoding="utf-8")
+    (task / "tasks.md").write_text(
+        tasks.replace("- \"LoginRequest rejects empty email\"", "- \"npm test\""),
+        encoding="utf-8",
+    )
+    with pytest.raises(HarnessError, match="runner command"):
+        service.validate_plan(task)
+
+
+def test_plan_requires_reason_when_a_level_has_no_tests(harness_source: Path, tmp_path: Path) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_valid(task)
+    tasks = (task / "tasks.md").read_text(encoding="utf-8")
+    (task / "tasks.md").write_text(
+        tasks.replace(
+            "    e2e:\n      - \"Administrator submits the login screen and reaches /reservations\"\n",
+            "    e2e: []\n",
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(HarnessError, match="tests_not_applicable.e2e"):
+        service.validate_plan(task)
