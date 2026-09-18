@@ -16,7 +16,7 @@ EXECUTE worker (fresh context)
        ↓
 CHECKS
        ↓
-REVIEW worker (fresh context, 4 tracks) → grava `review/review-NN.md` (não substitui rodadas anteriores)
+REVIEW worker (fresh context, 4 tracks) → grava `review/review-NN.md` (não substitui rodadas anteriores; Verdict da review ≠ overlay de checks)
        ↓
 Gate = checks green AND no blocker/high da **última** review?
   ├─ no → REPAIR worker (fresh context) → CHECKS → REVIEW

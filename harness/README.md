@@ -234,14 +234,16 @@ Saída humana em `review/review-NN.md` (histórico append-only; o Execute/Repair
 ```text
 🤖 AI Code Review (S)
 Summary
+Deterministic checks
 ❌ Blockers
 ⚠️ High
 📝 Medium
 ✅ Positive Findings
-Verdict: ✅ APPROVED / ❌ REJECTED
+Verdict: ✅ APPROVED / ❌ REJECTED   ← review consolidada (não é substituída por check vermelho)
+Harness gate: open / blocked        ← review APPROVED **e** checks verdes
 ```
 
-Blocker/High ou check obrigatório vermelho retorna a Execute/Repair.
+Blocker/High ou check obrigatório vermelho retorna a Execute/Repair. O markdown não troca o Verdict da review quando o bloqueio veio só dos checks.
 
 ## Gate 2 — antes do commit
 
