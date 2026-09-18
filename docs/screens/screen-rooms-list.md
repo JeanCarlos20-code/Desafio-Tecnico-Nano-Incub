@@ -89,12 +89,13 @@ The table displays one row per room.
 
 | Column | Source | Display rules |
 | --- | --- | --- |
-| `ID` | Room identifier | Display the identifier returned by the backend |
 | `Nome` | Room name | Plain text; do not silently truncate short names |
 | `Capacidade` | Room capacity | Positive integer |
 | `Status` | Active state | Colored status badge |
 | `Criada em` | Creation timestamp | Format as `DD/MM/YYYY` in the configured application timezone |
 | `Ações` | Available operations | Edit and delete icon buttons |
+
+The room identifier is not shown in the list or form. Keep it in persistence, Inertia props, React keys, and `/rooms/{room}` routes.
 
 ### Status badge
 
@@ -323,7 +324,7 @@ Flash messages must be announced through an accessible live region and must not 
 ## Acceptance criteria
 
 - [ ] Only authenticated administrators can access `/rooms`.
-- [ ] The list displays ID, name, capacity, status, creation date, and actions for every room.
+- [ ] The list displays name, capacity, status, creation date, and actions for every room. The room identifier is not shown in the list or form.
 - [ ] Active and inactive rooms use distinct text labels and visual badges.
 - [ ] Creation dates are displayed as `DD/MM/YYYY`.
 - [ ] `Nova sala` navigates to `/rooms/create`.
