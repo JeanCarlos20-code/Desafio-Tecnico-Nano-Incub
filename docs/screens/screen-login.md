@@ -18,7 +18,7 @@ Reference file:
 
 > The image guides the appearance of the screen, but its exact dimensions do not need to be reproduced. The layout must adapt responsively to the available space while preserving the behaviors, validation rules, and accessibility requirements defined in this document.
 
-- **Page route:** `GET /login`
+- **Page route:** `GET /` (guest home) and `GET /login`
 - **Submission route:** `POST /login`
 - **Access:** guests only
 - **Redirect after success:** `/reservations`
@@ -67,9 +67,11 @@ Main content:
 - supporting text `Entre para gerenciar as salas e reservas.`;
 - email field;
 - password field;
-- primary button `Entrar`.
+- primary button `Entrar`;
+- divider `Não tem uma conta?`;
+- secondary control `Ir para o cadastro` that opens `/register`.
 
-The screen must not include password recovery because it is outside the scope of the technical challenge. It also does not need to include a registration link unless administrator registration is intentionally enabled and documented.
+The screen must not include password recovery because it is outside the scope of the technical challenge. Administrator registration is enabled, so the login screen includes the cadastro control.
 
 ## Form fields
 
@@ -164,7 +166,7 @@ Não foi possível entrar. Tente novamente.
 
 ### Already authenticated user
 
-An authenticated administrator who accesses `/login` must be redirected to `/reservations` instead of seeing the login form again.
+An authenticated administrator who accesses `/` or `/login` must be redirected to `/reservations` instead of seeing the login form again.
 
 ## Navigation
 
@@ -172,6 +174,7 @@ An authenticated administrator who accesses `/login` must be redirected to `/res
 | --- | --- |
 | `Entrar` button | Submits the authentication form |
 | Enter key inside a field | Submits the authentication form |
+| `Ir para o cadastro` | Navigates to `/register` |
 
 There is no password recovery link because password recovery is not required by the challenge.
 
@@ -245,8 +248,9 @@ There is no password recovery link because password recovery is not required by 
 
 ## Acceptance criteria
 
-- [ ] The page is available at `/login` for unauthenticated users.
-- [ ] Authenticated users who access `/login` are redirected to `/reservations`.
+- [ ] The page is available at `/` and `/login` for unauthenticated users.
+- [ ] Authenticated users who access `/` or `/login` are redirected to `/reservations`.
+- [ ] The login screen includes `Ir para o cadastro`, which navigates to `/register`.
 - [ ] Email and password are required.
 - [ ] Laravel validation errors are displayed next to their corresponding fields.
 - [ ] Invalid credentials produce a generic error message.
