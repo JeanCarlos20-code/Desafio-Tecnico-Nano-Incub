@@ -5,16 +5,24 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test": "vitest run"
+        "lint": "eslint resources/js",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage"
     },
     "devDependencies": {
+        "@eslint/js": "^9.39.5",
         "@tailwindcss/vite": "^4.0.0",
         "@testing-library/jest-dom": "^6.8.0",
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^14.6.1",
         "@vitejs/plugin-react": "^5.2.0",
+        "@vitest/coverage-v8": "^3.2.7",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "eslint": "^9.39.5",
+        "eslint-plugin-react": "^7.37.5",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "globals": "^17.12.0",
         "jsdom": "^26.1.0",
         "laravel-vite-plugin": "^2.0.0",
         "tailwindcss": "^4.0.0",
