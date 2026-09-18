@@ -223,14 +223,22 @@ class HarnessGraph:
     def _plan_approval(self, state: HarnessState) -> HarnessState:
         meta = self._meta(state)
         task_dir = self._task_dir(state)
-        summary = self.artifacts.plan_summary(task_dir)
+        plan = self.artifacts.validate_plan(task_dir)
         warnings = state.get("warnings", [])
         payload: JSONObject = {
             "kind": "human",
             "gate": "plan",
             "task_id": meta.task_id,
-            "message": "Revise o plano, a solução proposta e as barreiras de teste antes de liberar implementação.",
-            "summary": summary,
+            "message": (
+                "Revise a solução e a barreira de teste antes de liberar implementação. "
+                "Este gate não autoriza commit."
+            ),
+            "summary": self.artifacts.plan_barrier_summary(task_dir),
+            "gates": [
+                {"id": item.id, "command": item.command, "required": item.required}
+                for item in plan.gates
+            ],
+            "stack_verify_required": list(self.config.verify.required),
             "warnings": [str(item) for item in warnings],
             "options": ["approve", "request_changes", "cancel"],
         }
@@ -350,7 +358,7 @@ class HarnessGraph:
         task_dir = self._task_dir(state)
         written = self.artifacts.write_review(
             task_dir,
-            self.reviews.render_markdown(review, checks_green),
+            self.reviews.render_markdown(review, checks_green, self.checks.render(checks)),
         )
         self.artifacts.append_progress(
             task_dir,

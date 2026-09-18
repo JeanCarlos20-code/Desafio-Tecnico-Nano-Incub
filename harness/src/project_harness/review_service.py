@@ -74,11 +74,17 @@ class ReviewService:
             blocking_ids=blocking,
         )
 
-    def render_markdown(self, result: ReviewResult, checks_green: bool) -> str:
+    def render_markdown(
+        self,
+        result: ReviewResult,
+        checks_green: bool,
+        check_summary: str = "",
+    ) -> str:
         blockers = [item for item in result.findings if item.severity == "blocker"]
         highs = [item for item in result.findings if item.severity == "high"]
         mediums = [item for item in result.findings if item.severity == "medium"]
-        approved = result.verdict is ReviewVerdict.APPROVED and checks_green
+        review_approved = result.verdict is ReviewVerdict.APPROVED
+        gate_open = review_approved and checks_green
 
         def section(items: list[Finding], empty: str) -> str:
             if not items:
@@ -94,13 +100,24 @@ class ReviewService:
 
         positives = "\n".join(f"- {item}" for item in result.positives) or "None noted."
         summary = result.summary.strip() or "Review complete."
-        if not checks_green:
-            summary += " Required deterministic checks are not green."
-        verdict = "✅ APPROVED" if approved else "❌ REJECTED"
+        checks_block = check_summary.strip() or (
+            "Required checks are green." if checks_green else "Required deterministic checks are not green."
+        )
+        review_verdict = "✅ APPROVED" if review_approved else "❌ REJECTED"
+        if gate_open:
+            gate_line = "✅ open — review APPROVED and required checks are green."
+        elif review_approved:
+            gate_line = "❌ blocked — review found no blocker/high; required checks are red."
+        elif checks_green:
+            gate_line = "❌ blocked — review REJECTED (blocker/high)."
+        else:
+            gate_line = "❌ blocked — review REJECTED and required checks are red."
         return (
             "🤖 **AI Code Review (S)**\n\n"
             "**Summary**\n\n"
             f"{summary}\n\n"
+            "**Deterministic checks**\n\n"
+            f"{checks_block}\n\n"
             "**❌ Blockers**\n\n"
             f"{section(blockers, 'None found.')}\n\n"
             "**⚠️ High**\n\n"
@@ -110,5 +127,7 @@ class ReviewService:
             "**✅ Positive Findings**\n\n"
             f"{positives}\n\n"
             "**Verdict**\n\n"
-            f"{verdict}\n"
+            f"{review_verdict}\n\n"
+            "**Harness gate**\n\n"
+            f"{gate_line}\n"
         )
