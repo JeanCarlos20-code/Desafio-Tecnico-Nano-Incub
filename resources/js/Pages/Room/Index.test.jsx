@@ -59,6 +59,10 @@ function mockPage() {
     });
 }
 
+function firstDesktopRowCells(container) {
+    return container.querySelector('table tbody tr').querySelectorAll('td');
+}
+
 afterEach(() => {
     cleanup();
 });
@@ -96,30 +100,86 @@ describe('Room/Index', () => {
         expect(screen.getAllByRole('link', { name: 'Nova sala' })[0]).toHaveAttribute('href', '/rooms/create');
     });
 
-    it('keeps compact columns from stretching and allows horizontal table scroll', () => {
+    it('Capacidade header and capacity cells share text-center', () => {
+        const { container } = render(<Index rooms={sampleRooms} />);
+
+        const capacityHeader = screen.getByRole('columnheader', { name: 'Capacidade' });
+        const capacityCell = firstDesktopRowCells(container)[1];
+
+        expect(capacityHeader.className).toMatch(/\btext-center\b/);
+        expect(capacityCell.className).toMatch(/\btext-center\b/);
+        expect(capacityHeader.className).not.toMatch(/\btext-left\b/);
+        expect(capacityCell.className).not.toMatch(/\btext-left\b/);
+        expect(capacityHeader.className).not.toMatch(/\btext-right\b/);
+        expect(capacityCell.className).not.toMatch(/\btext-right\b/);
+        expect(capacityCell).toHaveTextContent('10');
+    });
+
+    it('Nome keeps leftover-width priority via w-full and min-w-0 without xl:w-[16%]', () => {
+        const { container } = render(<Index rooms={sampleRooms} />);
+
+        const nameHeader = screen.getByRole('columnheader', { name: 'Nome' });
+        const nameCell = firstDesktopRowCells(container)[0];
+
+        expect(nameHeader.className).toMatch(/min-w-0/);
+        expect(nameCell.className).toMatch(/min-w-0/);
+        expect(nameHeader.className).toMatch(/\bw-full\b/);
+        expect(nameCell.className).toMatch(/\bw-full\b/);
+        expect(nameHeader.className).not.toMatch(/xl:w-\[16%\]/);
+        expect(nameCell.className).not.toMatch(/xl:w-\[16%\]/);
+        expect(nameHeader.className).not.toMatch(/max-w-/);
+        expect(nameCell.className).not.toMatch(/max-w-/);
+    });
+
+    it('Capacidade, Status, Criada em, and Ações stay compact with w-0 and use xl:w-[16%] nowrap', () => {
+        const { container } = render(<Index rooms={sampleRooms} />);
+
+        const headers = [
+            screen.getByRole('columnheader', { name: 'Capacidade' }),
+            screen.getByRole('columnheader', { name: 'Status' }),
+            screen.getByRole('columnheader', { name: 'Criada em' }),
+            screen.getByRole('columnheader', { name: 'Ações' }),
+        ];
+        const cells = [...firstDesktopRowCells(container)].slice(1);
+
+        headers.forEach((header) => {
+            expect(header.className).toMatch(/\bw-0\b/);
+            expect(header.className).toMatch(/xl:w-\[16%\]/);
+            expect(header.className).toMatch(/whitespace-nowrap/);
+        });
+        cells.forEach((cell) => {
+            expect(cell.className).toMatch(/\bw-0\b/);
+            expect(cell.className).toMatch(/xl:w-\[16%\]/);
+        });
+    });
+
+    it('Ações header and cells share text-center and do not use text-right', () => {
+        const { container } = render(<Index rooms={sampleRooms} />);
+
+        const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' });
+        const actionsCell = firstDesktopRowCells(container)[4];
+
+        expect(actionsHeader.className).toMatch(/\btext-center\b/);
+        expect(actionsCell.className).toMatch(/\btext-center\b/);
+        expect(actionsHeader.className).not.toMatch(/\btext-right\b/);
+        expect(actionsCell.className).not.toMatch(/\btext-right\b/);
+    });
+
+    it('still uses table-auto, overflow-x-auto, md:block table, and md:hidden mobile cards', () => {
         const { container } = render(<Index rooms={sampleRooms} />);
 
         const table = container.querySelector('table');
         const scrollRegion = table.parentElement;
         const desktopSurface = scrollRegion.parentElement;
-        const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' });
-        const nameHeader = screen.getByRole('columnheader', { name: 'Nome' });
         const mobileList = container.querySelector('ul');
 
         expect(table.className).toMatch(/\bw-full\b/);
         expect(table.className).toMatch(/table-auto/);
+        expect(table.className).not.toMatch(/table-fixed/);
         expect(scrollRegion.className).toMatch(/overflow-x-auto/);
         expect(desktopSurface.className).toMatch(/min-w-0/);
         expect(desktopSurface.className).toMatch(/md:block/);
-        expect(nameHeader.className).toMatch(/min-w-0/);
-        expect(actionsHeader.className).toMatch(/\bw-0\b/);
-        expect(actionsHeader.className).toMatch(/whitespace-nowrap/);
-        expect(actionsHeader.className).toMatch(/text-right/);
-        expect(screen.getByRole('columnheader', { name: 'Capacidade' }).className).toMatch(/whitespace-nowrap/);
-        expect(screen.getByRole('columnheader', { name: 'Status' }).className).toMatch(/whitespace-nowrap/);
-        expect(screen.getByRole('columnheader', { name: 'Criada em' }).className).toMatch(/whitespace-nowrap/);
         expect(mobileList.className).toMatch(/md:hidden/);
-        expect(screen.queryByRole('columnheader', { name: 'ID' })).not.toBeInTheDocument();
     });
 
     it('shows the empty state and Nova sala when there are no rooms', () => {
