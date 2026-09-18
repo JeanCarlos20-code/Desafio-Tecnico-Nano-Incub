@@ -12,9 +12,10 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+    <!-- ADR-005: unit coverage min 80 measures Application only. Add each module Application path. -->
     <source>
         <include>
-            <directory>app</directory>
+            <directory suffix=".php">app/Modules/User/Application</directory>
         </include>
     </source>
     <php>
