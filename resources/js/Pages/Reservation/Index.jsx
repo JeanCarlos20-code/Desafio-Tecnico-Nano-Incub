@@ -1,7 +1,9 @@
+import AppLayout from '../../Layouts/AppLayout';
+
 export default function Index() {
     return (
-        <div className="p-8">
+        <AppLayout>
             <h1>Reservas</h1>
-        </div>
+        </AppLayout>
     );
 }

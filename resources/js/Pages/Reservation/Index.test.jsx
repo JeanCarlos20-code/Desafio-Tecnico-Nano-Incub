@@ -13,4 +13,16 @@ describe('Reservation/Index stub', () => {
 
         expect(screen.getByRole('heading', { name: 'Reservas' })).toBeInTheDocument();
     });
+
+    it('wraps the stub heading in the AppLayout viewport shell', () => {
+        render(<Index />);
+
+        const heading = screen.getByRole('heading', { name: 'Reservas' });
+        const shell = heading.closest('[class*="min-h-screen"]');
+
+        expect(shell).toBeTruthy();
+        expect(shell.className).toMatch(/min-h-screen/);
+        expect(shell.className).toMatch(/overflow-x-hidden/);
+        expect(shell.contains(heading)).toBe(true);
+    });
 });
