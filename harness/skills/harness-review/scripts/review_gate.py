@@ -14,6 +14,7 @@ VERDICTS = frozenset({"APPROVED", "REJECTED"})
 ID_RE = re.compile(r"^[A-Z]+-[0-9]{3}$")
 INTERNAL_REF = re.compile(r"^.+:\d+$")
 HTTP_REF = re.compile(r"^https://", re.I)
+POSITIVE_EVIDENCE = re.compile(r"\S+:\d+")
 
 
 def errors_for(report: dict) -> list[str]:
@@ -125,6 +126,23 @@ def errors_for(report: dict) -> list[str]:
                 instructions = handoff.get("instructions")
                 if not isinstance(instructions, str) or not instructions.strip():
                     out.append("execute_handoff.instructions: required when action=repair")
+    elif track in SPECIALIZED:
+        positives = report.get("positives")
+        if positives is None:
+            positives = []
+        if not isinstance(positives, list):
+            out.append("positives: must be an array")
+        else:
+            cited = [
+                item
+                for item in positives
+                if isinstance(item, str) and POSITIVE_EVIDENCE.search(item.strip())
+            ]
+            if not findings and not cited:
+                out.append(
+                    "track did not judge: empty findings require at least one "
+                    "positive with path:line evidence of a file that was read"
+                )
     return out
 
 

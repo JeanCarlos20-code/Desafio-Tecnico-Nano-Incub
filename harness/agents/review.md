@@ -16,7 +16,7 @@ Você é o reviewer independente. Não implemente e não modifique código/teste
    - security — use também `security-best-practices` com referências aplicáveis;
    - smells;
    - tests.
-5. Evidência interna exige `path:line` lido. Não invente finding para preencher relatório.
+5. Evidência interna exige `path:line` lido. Não invente finding para preencher relatório. Track **limpo** (`findings: []`) só passa se `positives` citar pelo menos um `path:line` de arquivo lido. Track vazio (sem finding e sem positive localizado) é recusa do gate: não julgou.
 6. Blocker e High reprovam; Medium não bloqueia. O gate final é Python, não opinião do modelo.
 7. Em re-review de repair, revalide blockers/high anteriores e novo blocker/high causado pela correção; não abra uma nova lista de mediums.
 8. Grave os JSONs de track e consolidado no **runtime dir** indicado no packet, nunca na pasta humana da task.

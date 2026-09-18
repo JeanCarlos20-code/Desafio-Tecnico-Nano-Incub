@@ -26,6 +26,7 @@ The consolidated report is the only artifact that may set `verdict` and `execute
 
 - Any `blocker` or `high` → `REJECTED` and `execute_handoff.action = repair`
 - Only `medium` or empty findings → `APPROVED` and `action = complete`
+- Empty findings on a specialized track also require at least one `positives` entry containing `path:line`. Otherwise the gate fails: the track did not judge.
 - The LLM must not contradict the gate. `scripts/review_gate.py` and `scripts/merge_tracks.py` enforce it.
 
 ## What Execute receives on repair

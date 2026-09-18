@@ -35,7 +35,7 @@ Run scripts as `python3 "$SKILL_DIR/scripts/<name>.py"`.
 3. **List every real finding.** No nit cap. No “overflow counted in summary”. Do not invent items to fill a report. Preference is not a finding.
 4. **Do not comment on what checks already catch.** If `php artisan test` or Pint already fail, treat that as a harness check fact, not a prose finding — unless the test was deleted/weakened to hide a regression (that **is** a tests-track finding).
 5. **Specialized tracks do not verdict the task.** They write JSON with `verdict: null`. Only consolidate + `merge_tracks.py` set `APPROVED` / `REJECTED`.
-6. **Gate:** any `blocker` or `high` → `REJECTED` → Execute repair. Only `medium` or zero findings → `APPROVED`. The LLM must not override this.
+6. **Gate:** any `blocker` or `high` → `REJECTED` → Execute repair. Only `medium` or zero findings → `APPROVED`, **and only if each clean track proved it judged**: empty `findings` requires at least one `positives` item with `path:line` of a file actually read. Empty findings + empty/unlocated positives → GATE FAIL (the track did not review). The LLM must not override this.
 7. **Round 1 is the whole review.** Later harness loops only check previous blocking ids plus new blocker/high introduced by the repair. Do not open new medium fronts on repair rounds unless they are new blocker/high caused by the fix.
 8. **Portuguese** for `summary`, `problem`, `impact`, `fix`, and `instructions`. Keep ids, paths, severity tokens, and verdicts in English.
 
@@ -87,7 +87,7 @@ Each track JSON:
 }
 ```
 
-If the track is clean, `findings` is `[]` and the summary says that clearly.
+If the track is clean, `findings` is `[]` **and** `positives` cites at least one `path:line` you actually read. A track with empty findings and no located positive fails `review_gate.py` — it did not judge.
 
 Then:
 
@@ -132,7 +132,7 @@ Actions: load the four `docs/reviews/*.md` files → four JSON reports → gate 
 
 ### Clean diff
 
-All tracks empty findings → merge `APPROVED` / `complete`.
+All tracks empty findings **with path:line positives** → merge `APPROVED` / `complete`. A track that writes `findings: []` and `positives: []` fails the gate.
 
 ### Repair round
 

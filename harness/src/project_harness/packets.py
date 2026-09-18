@@ -305,7 +305,7 @@ O harness grava cada rodada em `{task_dir / 'review' / 'review-NN.md'}` (append-
 - `harness/skills/harness-review/SKILL.md`
 - para o track security: `harness/skills/security-best-practices/SKILL.md`
 
-Execute os **quatro tracks**: architecture, security, smells, tests. Não existe agente de arquitetura separado; arquitetura é somente um track independente da review.
+Execute os **quatro tracks**: architecture, security, smells, tests. Não existe agente de arquitetura separado; arquitetura é somente um track independente da review. Track limpo exige `positives` com `path:line`; `findings: []` e `positives: []` falha o `review_gate.py`.
 
 Arquivos esperados no diretório de runtime (não na pasta humana da task):
 - `{output / 'architecture.json'}`
