@@ -1,3 +1,7 @@
 # Desafio-Tecnico-Nano-Incub
 
-Embora o desafio exija apenas autenticação administrativa via usuário seedado, a rota `/register` permanece pública porque o login de administrador ainda não está implementado. Essa tela é uma conveniência do desafio: qualquer visitante pode criar uma conta de administrador. Permitir auto-cadastro público de administrador não é recomendado em produção.
+Administradores entram em `/login` com e-mail e senha. As rotas do painel, incluindo `/reservations`, exigem uma sessão autenticada.
+
+A rota `/register` permanece publicamente acessível como conveniência do desafio técnico. Auto-cadastro público de administrador não é recomendado em produção.
+
+Para experimentar o login localmente, o seeder cria o usuário `test@example.com` com senha `password`.
