@@ -1,0 +1,13 @@
+id: pi
+display_name: Pi
+agent_mode: skill
+agent_dir: .pi/skills
+skill_dirs:
+  - .pi/skills
+instruction_mode: agents-md
+mcp:
+  mode: project-json
+  path: .pi/mcp.json
+  style: standard
+  root_key: mcpServers
+  env_syntax: "${%s}"

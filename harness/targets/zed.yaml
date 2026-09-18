@@ -1,0 +1,13 @@
+id: zed
+display_name: Zed
+agent_mode: skill
+agent_dir: .agents/skills
+skill_dirs:
+  - .agents/skills
+instruction_mode: agents-md
+mcp:
+  mode: project-json
+  path: .zed/settings.json
+  style: zed
+  root_key: context_servers
+  env_syntax: "${%s}"

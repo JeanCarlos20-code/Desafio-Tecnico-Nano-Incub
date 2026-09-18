@@ -1,0 +1,20 @@
+version: 1
+workflow:
+  specs_root: .specs/tasks
+  docs_root: docs
+  max_repair_rounds: 3
+  context_limits:
+    context_md_tokens: 12000
+    spec_md_tokens: 5000
+    tasks_md_tokens: 10000
+  git:
+    task_branch_prefix: harness/
+    merge_no_ff: true
+    worktree_root_env: HARNESS_WORKTREE_ROOT
+verify:
+  required:
+    - test
+    - lint
+    - build
+sync:
+  default_targets: []

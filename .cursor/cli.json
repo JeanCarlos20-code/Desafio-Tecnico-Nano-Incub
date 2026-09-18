@@ -1,0 +1,10 @@
+{
+    "permissions": {
+        "allow": [
+            "Read(/home/jeansouza/.cache/project-harness/worktrees/**)",
+            "Write(/home/jeansouza/.cache/project-harness/worktrees/**)",
+            "Shell(git)"
+        ],
+        "deny": []
+    }
+}

@@ -1,0 +1,13 @@
+id: antigravity
+display_name: Antigravity
+agent_mode: antigravity
+agent_dir: .agents/agents
+skill_dirs:
+  - .agents/skills
+instruction_mode: agents-md
+mcp:
+  mode: project-json
+  path: .agents/mcp_config.json
+  style: antigravity
+  root_key: mcpServers
+  env_syntax: "${%s}"
