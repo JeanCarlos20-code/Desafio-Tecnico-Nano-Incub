@@ -33,7 +33,7 @@ O diretório `harness/` deve ficar na raiz do projeto.
 ```bash
 python3 -m venv .venv-harness
 source .venv-harness/bin/activate
-pip install -e ./harness
+pip install -e "./harness[test]"
 ```
 
 O `langgraph-checkpoint-sqlite` persiste interrupts e estado em `.git/harness/checkpoints.sqlite`. O harness força `LANGGRAPH_STRICT_MSGPACK=true`; o state contém somente valores simples serializáveis.

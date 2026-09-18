@@ -68,6 +68,9 @@ components:
       frontend_build:
         command: npm run build
 
+      build:
+        command: composer run build && npm run build
+
   - name: harness
     root: harness
 
