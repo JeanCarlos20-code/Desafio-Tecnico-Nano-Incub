@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\User;
 
-use App\Models\User;
+use App\Modules\User\Infra\Database\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -30,7 +30,7 @@ class UserSchemaTest extends TestCase
         $this->assertNotNull($user->created_at);
         $this->assertNotNull($user->updated_at);
 
-        $allowed = ['id', 'name', 'email', 'password', 'remember_token', 'created_at', 'updated_at'];
+        $allowed = ['id', 'name', 'email', 'password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         $this->assertSame([], array_values(array_diff(array_keys($user->getAttributes()), $allowed)));
 
         $this->assertDatabaseHas('users', [
