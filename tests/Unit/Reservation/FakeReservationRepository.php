@@ -77,7 +77,10 @@ final class FakeReservationRepository implements ReservationRepository
     ): array {
         $this->listed[] = compact('page', 'perPage', 'roomId', 'dayStart', 'dayEndExclusive');
 
-        $items = array_values($this->reservations);
+        $items = array_values(array_filter(
+            $this->reservations,
+            fn (Reservation $reservation): bool => $reservation->cancelledAt === null,
+        ));
 
         return [
             'items' => array_slice($items, ($page - 1) * $perPage, $perPage),
@@ -87,7 +90,13 @@ final class FakeReservationRepository implements ReservationRepository
 
     public function hasAny(): bool
     {
-        return $this->reservations !== [];
+        foreach ($this->reservations as $reservation) {
+            if ($reservation->cancelledAt === null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function findById(string $id): ?Reservation
@@ -113,5 +122,65 @@ final class FakeReservationRepository implements ReservationRepository
             updatedAt: $cancelledAt,
             roomName: $existing->roomName,
         );
+    }
+
+    public function countActiveFutureByRoom(string $roomId, DateTimeImmutable $now): int
+    {
+        $count = 0;
+
+        foreach ($this->reservations as $reservation) {
+            if ($reservation->roomId === $roomId
+                && $reservation->cancelledAt === null
+                && $reservation->startsAt > $now
+            ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public function countByRoomIds(array $ids): array
+    {
+        $counts = [];
+
+        foreach ($ids as $id) {
+            $counts[$id] = 0;
+        }
+
+        foreach ($this->reservations as $reservation) {
+            if (! array_key_exists($reservation->roomId, $counts)) {
+                continue;
+            }
+
+            $counts[$reservation->roomId]++;
+        }
+
+        return $counts;
+    }
+
+    public function cancelActiveFutureByRoom(string $roomId, DateTimeImmutable $now, DateTimeImmutable $cancelledAt): void
+    {
+        foreach ($this->reservations as $reservation) {
+            if ($reservation->roomId !== $roomId
+                || $reservation->cancelledAt !== null
+                || $reservation->startsAt <= $now
+            ) {
+                continue;
+            }
+
+            $this->markCanceled($reservation->id, $cancelledAt);
+        }
+    }
+
+    public function cancelAllActiveByRoom(string $roomId, DateTimeImmutable $cancelledAt): void
+    {
+        foreach ($this->reservations as $reservation) {
+            if ($reservation->roomId !== $roomId || $reservation->cancelledAt !== null) {
+                continue;
+            }
+
+            $this->markCanceled($reservation->id, $cancelledAt);
+        }
     }
 }
