@@ -17,6 +17,7 @@
         <include>
             <directory suffix=".php">app/Modules/User/Application</directory>
             <directory suffix=".php">app/Modules/Room/Application</directory>
+            <directory suffix=".php">app/Modules/Reservation/Application</directory>
         </include>
     </source>
     <php>
