@@ -9,9 +9,15 @@ use DateTimeImmutable;
 
 final class EloquentRoomRepository implements RoomRepository
 {
-    public function listPage(int $page, int $perPage): array
+    public function listPage(int $page, int $perPage, string $status = 'all'): array
     {
         $query = RoomModel::query()->orderBy('id');
+
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('is_active', false);
+        }
 
         $total = (clone $query)->count();
         $models = $query->forPage($page, $perPage)->get();
@@ -27,6 +33,18 @@ final class EloquentRoomRepository implements RoomRepository
         $model = RoomModel::query()->find($id);
 
         return $model ? $this->toDomain($model) : null;
+    }
+
+    public function lockById(string $id): ?Room
+    {
+        $model = RoomModel::query()->whereKey($id)->lockForUpdate()->first();
+
+        return $model ? $this->toDomain($model) : null;
+    }
+
+    public function hasAny(): bool
+    {
+        return RoomModel::query()->exists();
     }
 
     public function create(string $name, int $capacity, bool $isActive): Room
