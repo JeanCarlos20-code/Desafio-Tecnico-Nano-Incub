@@ -30,13 +30,12 @@ Reference file:
 
 Provide a central administrative view where the user can:
 
-- view room reservations in chronological order;
+- view active room reservations in chronological order;
 - filter reservations by room;
 - filter reservations by day;
-- identify active and canceled reservations;
 - open the new reservation form;
 - cancel an active reservation after confirmation;
-- verify that a canceled reservation no longer blocks its time interval.
+- verify that a canceled reservation disappears from the list and no longer blocks its time interval.
 
 Reservation data must come from the backend. Example rows from the visual reference must not be hardcoded in the React component.
 
@@ -175,18 +174,17 @@ start_at ASC
 
 This places the earliest reservation of the selected day first and the later reservations afterward. Reservations with the same start time must use a deterministic secondary order, such as reservation ID.
 
-Canceled reservations remain in their chronological position and must not disappear from the history merely because they no longer block the room.
+Canceled reservations do not appear in this list. Cancellation is treated like deletion for the list: the row is gone after a successful cancel, and `ListReservations` returns only rows with `cancelled_at` null. The record remains in the database so the interval is free (RF12) and so audit is possible outside this screen.
 
 ## Status badges
 
-The interface supports at least these states:
+This list only contains active reservations. The status column still shows:
 
 | Backend value | Visible label | Visual treatment |
 | --- | --- | --- |
 | `active` | `Ativa` | Green text on a light-green background |
-| `canceled` | `Cancelada` | Gray text on a light-gray background |
 
-Color must not be the only way status is communicated. The visible status text is mandatory.
+Do not render a `Cancelada` row or badge here. After cancellation the row is removed.
 
 If an active reservation has already ended, it may continue to use `Ativa` if the domain model only distinguishes active and canceled. Do not invent a completed status unless it is explicitly modeled and documented.
 
@@ -200,9 +198,9 @@ Active reservations that are eligible for cancellation display the button:
 Cancelar
 ```
 
-Canceled reservations display a dash or unavailable state instead of another cancel button.
+There is no canceled row in this list, so there is no unavailable dash state to render.
 
-The cancellation action must change the reservation status; it must not permanently delete the reservation record.
+The cancellation action sets `cancelled_at`; it must not hard-delete the reservation record. The row then disappears from the list.
 
 ## Cancellation confirmation
 
@@ -228,7 +226,7 @@ Cancelar reserva
 4. Selecting `Voltar` or pressing `Escape` closes the dialog without changing data.
 5. Selecting `Cancelar reserva` sends `PATCH /reservations/{reservation}/cancel`.
 6. While processing, dialog controls are disabled and the destructive action changes to `Cancelando...`.
-7. After success, the dialog closes and the row status changes to `Cancelada`.
+7. After success, the dialog closes and the row disappears from the list.
 8. The canceled interval immediately becomes available for a new reservation.
 9. Focus returns to an appropriate position in the updated table and the result is announced.
 
@@ -249,7 +247,7 @@ The backend must perform cancellation consistently:
 - ensure canceled reservations are excluded from conflict checks;
 - prevent partial changes if the operation fails.
 
-Reservations canceled as part of room deactivation must follow the same status and availability rules and appear as `Cancelada` in this list.
+Reservations canceled as part of room deactivation or room deletion follow the same rule: they leave the list and stop blocking the interval. They must not remain visible as `Cancelada`.
 
 ## Empty and filtered states
 
@@ -391,7 +389,7 @@ Requirements:
 - cancellation successful;
 - cancellation failed;
 - active reservation row;
-- canceled reservation row;
+- canceled reservation removed from the list;
 - expired or unauthenticated session.
 
 ## Acceptance criteria
@@ -404,17 +402,15 @@ Requirements:
 - [ ] Room and day filters can be combined.
 - [ ] Active filters are represented in the URL and preserved during pagination.
 - [ ] `Nova reserva` navigates to `/reservations/create`.
-- [ ] Active and canceled reservations use distinct visible labels and badges.
+- [ ] The list displays only reservations with `cancelled_at` null.
 - [ ] The `Ações` column does not display a calendar or reservation-details icon.
 - [ ] Eligible active reservations display only the `Cancelar` action.
-- [ ] Canceled reservations display no action and use a dash or equivalent unavailable state.
 - [ ] Canceling a reservation always requires explicit confirmation.
 - [ ] The cancellation dialog identifies the reservation being affected.
-- [ ] Canceling changes the status instead of deleting the reservation record.
-- [ ] A canceled reservation no longer blocks its time interval.
+- [ ] Canceling sets `cancelled_at` instead of hard-deleting the reservation record.
+- [ ] A canceled reservation disappears from the list and no longer blocks its time interval.
 - [ ] A repeated cancellation request does not corrupt reservation state.
-- [ ] Canceled reservations remain visible in the list as historical records.
-- [ ] Reservations canceled during room deactivation also appear as canceled.
+- [ ] Reservations canceled during room deactivation or deletion also disappear from the list.
 - [ ] The screen provides appropriate empty, loading, and error states.
 - [ ] The authenticated administrator data is not hardcoded.
 - [ ] The screen works correctly on desktop, tablet, and mobile.
