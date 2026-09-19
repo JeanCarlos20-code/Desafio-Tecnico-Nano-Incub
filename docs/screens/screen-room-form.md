@@ -431,7 +431,7 @@ When `Cancelar reuniões programadas` is selected and the administrator confirms
 
 - mark the room as inactive;
 - cancel only active reservations whose start time is still in the future;
-- preserve canceled reservation records for history and auditability;
+- preserve canceled reservation records in the database (`cancelled_at`); they disappear from the reservations list;
 - release the canceled time intervals;
 - do not alter completed, already canceled, or currently in-progress meetings.
 
