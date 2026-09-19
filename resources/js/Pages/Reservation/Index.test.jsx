@@ -40,8 +40,8 @@ const sampleReservations = {
             starts_at: '10:00',
             ends_at: '10:30',
             participants: 3,
-            status: 'canceled',
-            status_label: 'Cancelada',
+            status: 'active',
+            status_label: 'Ativa',
         },
     ],
     total: 2,
@@ -97,7 +97,7 @@ beforeEach(() => {
 });
 
 describe('Reservation/Index', () => {
-    it('shows columns, Ativa/Cancelada badges, Cancelar only on active rows, and no calendar icon', () => {
+    it('does not render a Cancelada row or badge', () => {
         const { container } = renderIndex();
 
         expect(screen.getByRole('heading', { name: 'Reservas' })).toBeInTheDocument();
@@ -112,9 +112,8 @@ describe('Reservation/Index', () => {
         expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
         expect(screen.getAllByText('res-1').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Ativa').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Cancelada').length).toBeGreaterThan(0);
+        expect(screen.queryByText('Cancelada')).not.toBeInTheDocument();
         expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
-        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
         expect(container.querySelector('svg[data-calendar]')).toBeNull();
         expect(screen.queryByRole('link', { name: /detalhes/i })).not.toBeInTheDocument();
         expect(screen.getAllByRole('link', { name: 'Nova reserva' })[0]).toHaveAttribute(

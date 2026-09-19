@@ -15,13 +15,14 @@ vi.mock('@inertiajs/react', () => ({
 const rooms = [{ id: 'room-1', name: 'Sala Azul', capacity: 8 }];
 
 function createForm(overrides = {}) {
-    return {
+    const form = {
         data: {
             room_id: '',
             responsible: '',
             title: '',
-            starts_at: '',
-            ends_at: '',
+            date: '',
+            start_time: '',
+            end_time: '',
             participants: '',
             ...overrides.data,
         },
@@ -29,8 +30,21 @@ function createForm(overrides = {}) {
         processing: overrides.processing ?? false,
         setData: vi.fn(),
         post: vi.fn(),
+        transform: vi.fn(),
         ...overrides,
     };
+
+    form.setData.mockImplementation((key, value) => {
+        form.data[key] = value;
+    });
+
+    form.transform.mockImplementation((callback) => {
+        form.lastTransform = callback;
+
+        return form;
+    });
+
+    return form;
 }
 
 function mockPage() {
@@ -43,11 +57,11 @@ function mockPage() {
     });
 }
 
-function renderCreate(overrides = {}) {
+function renderCreate(overrides = {}, pageRooms = rooms) {
     const form = createForm(overrides);
     useForm.mockReturnValue(form);
 
-    return { form, ...render(<Create rooms={rooms} />) };
+    return { form, ...render(<Create rooms={pageRooms} />) };
 }
 
 afterEach(() => {
@@ -61,51 +75,62 @@ beforeEach(() => {
 });
 
 describe('Reservation/Create', () => {
-    it('shows required fields, posts to /reservations, shows errors, Salvando..., and Cancelar to /reservations', async () => {
+    it('shows documented fields, combines date and times, and posts Criar reserva', async () => {
         const user = userEvent.setup();
         const { form } = renderCreate({
             data: {
                 room_id: 'room-1',
                 responsible: 'Ada',
                 title: 'Daily',
-                starts_at: '2026-09-21T10:00',
-                ends_at: '2026-09-21T10:30',
+                date: '2026-09-21',
+                start_time: '10:00',
+                end_time: '10:30',
                 participants: 2,
             },
         });
 
         expect(screen.getByRole('heading', { name: 'Nova reserva' })).toBeInTheDocument();
+        expect(screen.getByText('Preencha os dados da reserva.')).toBeInTheDocument();
         expect(screen.getByLabelText(/Sala/)).toHaveAttribute('aria-required', 'true');
         expect(screen.getByLabelText(/Responsável/)).toHaveAttribute('aria-required', 'true');
-        expect(screen.getByLabelText(/Título/)).toHaveAttribute('aria-required', 'true');
-        expect(screen.getByLabelText(/Início/)).toHaveAttribute('aria-required', 'true');
-        expect(screen.getByLabelText(/Fim/)).toHaveAttribute('aria-required', 'true');
+        expect(screen.getByLabelText(/Título \/ finalidade/)).toHaveAttribute('aria-required', 'true');
+        expect(screen.getByLabelText(/^Data/)).toHaveAttribute('aria-required', 'true');
+        expect(screen.getByLabelText(/Horário de início/)).toHaveAttribute('aria-required', 'true');
+        expect(screen.getByLabelText(/Horário de término/)).toHaveAttribute('aria-required', 'true');
         expect(screen.getByLabelText(/Participantes/)).toHaveAttribute('aria-required', 'true');
+        expect(screen.getByRole('option', { name: 'Sala Azul — capacidade para 8 pessoas' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/reservations');
+        expect(screen.getByRole('button', { name: 'Criar reserva' })).toBeInTheDocument();
 
-        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
 
         expect(form.post).toHaveBeenCalledTimes(1);
         expect(form.post).toHaveBeenCalledWith('/reservations', expect.any(Object));
+        expect(form.lastTransform(form.data)).toEqual({
+            room_id: 'room-1',
+            responsible: 'Ada',
+            title: 'Daily',
+            starts_at: '2026-09-21 10:00:00',
+            ends_at: '2026-09-21 10:30:00',
+            participants: 2,
+        });
     });
 
-    it('writes sala, responsável, título, início, fim, and participantes into the form', async () => {
+    it('blocks a participants value above the selected room capacity', async () => {
         const user = userEvent.setup();
-        const { form } = renderCreate();
+        const { form } = renderCreate({ data: { room_id: 'room-1' } });
+
+        fireEvent.change(screen.getByLabelText(/Participantes/), { target: { value: '8' } });
+        expect(form.setData).toHaveBeenCalledWith('participants', '8');
+
+        form.setData.mockClear();
+        fireEvent.change(screen.getByLabelText(/Participantes/), { target: { value: '9' } });
+        expect(form.setData).not.toHaveBeenCalled();
+        expect(screen.getByLabelText(/Participantes/)).toHaveAttribute('max', '8');
+        expect(screen.getByLabelText(/Participantes/)).toHaveAttribute('min', '1');
 
         await user.selectOptions(screen.getByLabelText(/Sala/), 'room-1');
-        fireEvent.change(screen.getByLabelText(/Responsável/), { target: { value: 'Ada' } });
-        fireEvent.change(screen.getByLabelText(/Título/), { target: { value: 'Daily' } });
-        fireEvent.change(screen.getByLabelText(/Início/), { target: { value: '2026-09-21T10:00' } });
-        fireEvent.change(screen.getByLabelText(/Fim/), { target: { value: '2026-09-21T10:30' } });
-        fireEvent.change(screen.getByLabelText(/Participantes/), { target: { value: '2' } });
-
         expect(form.setData).toHaveBeenCalledWith('room_id', 'room-1');
-        expect(form.setData).toHaveBeenCalledWith('responsible', 'Ada');
-        expect(form.setData).toHaveBeenCalledWith('title', 'Daily');
-        expect(form.setData).toHaveBeenCalledWith('starts_at', '2026-09-21T10:00');
-        expect(form.setData).toHaveBeenCalledWith('ends_at', '2026-09-21T10:30');
-        expect(form.setData).toHaveBeenCalledWith('participants', '2');
     });
 
     it('shows backend field errors and focuses the first invalid field', async () => {
@@ -119,7 +144,7 @@ describe('Reservation/Create', () => {
             });
         });
 
-        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
 
         expect(screen.getByLabelText(/Sala/)).toHaveFocus();
 
@@ -134,11 +159,11 @@ describe('Reservation/Create', () => {
         expect(screen.getByLabelText(/Sala/)).toHaveAttribute('aria-invalid', 'true');
     });
 
-    it('shows Salvando... and disables actions while processing', async () => {
+    it('shows Criando reserva... and disables actions while processing', async () => {
         const user = userEvent.setup();
         const { form } = renderCreate({ processing: true });
 
-        const submit = screen.getByRole('button', { name: 'Salvando...' });
+        const submit = screen.getByRole('button', { name: 'Criando reserva...' });
         const cancel = screen.getByRole('button', { name: 'Cancelar' });
 
         expect(submit).toBeDisabled();
@@ -158,11 +183,19 @@ describe('Reservation/Create', () => {
             options.onHttpException();
         });
 
-        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
 
         expect(screen.getByText('Não foi possível salvar a reserva. Tente novamente.')).toHaveAttribute(
             'aria-live',
             'polite',
         );
+    });
+
+    it('shows the empty active-rooms state when no room can be reserved', () => {
+        renderCreate({}, []);
+
+        expect(screen.getByText('Nenhuma sala ativa está disponível.')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Nova sala' })).toHaveAttribute('href', '/rooms/create');
+        expect(screen.queryByRole('button', { name: 'Criar reserva' })).not.toBeInTheDocument();
     });
 });
