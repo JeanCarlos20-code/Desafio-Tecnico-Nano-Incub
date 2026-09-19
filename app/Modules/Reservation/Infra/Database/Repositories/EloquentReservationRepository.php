@@ -44,14 +44,18 @@ final class EloquentReservationRepository implements ReservationRepository
         int $page,
         int $perPage,
         ?string $roomId,
-        DateTimeImmutable $dayStart,
-        DateTimeImmutable $dayEndExclusive,
+        ?DateTimeImmutable $rangeStart,
+        ?DateTimeImmutable $rangeEndExclusive,
     ): array {
         $query = ReservationModel::query()
             ->with('room')
             ->whereNull('cancelled_at')
-            ->where('starts_at', '>=', $dayStart)
-            ->where('starts_at', '<', $dayEndExclusive)
+            ->when(
+                $rangeStart !== null && $rangeEndExclusive !== null,
+                fn ($builder) => $builder
+                    ->where('starts_at', '>=', $rangeStart)
+                    ->where('starts_at', '<', $rangeEndExclusive),
+            )
             ->when($roomId, fn ($builder) => $builder->where('room_id', $roomId))
             ->orderBy('starts_at')
             ->orderBy('id');
