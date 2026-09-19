@@ -3,6 +3,8 @@
 namespace App\Modules\Room\Infra\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Reservation\Domain\Clock;
+use App\Modules\Reservation\Domain\Repositories\ReservationRepository;
 use App\Modules\Room\Application\Errors\RoomNotFound;
 use App\Modules\Room\Application\UseCases\FindRoom;
 use Inertia\Inertia;
@@ -10,8 +12,12 @@ use Inertia\Response;
 
 class EditRoomController extends Controller
 {
-    public function __invoke(string $room, FindRoom $findRoom): Response
-    {
+    public function __invoke(
+        string $room,
+        FindRoom $findRoom,
+        ReservationRepository $reservations,
+        Clock $clock,
+    ): Response {
         try {
             $found = $findRoom->execute($room);
         } catch (RoomNotFound) {
@@ -25,7 +31,7 @@ class EditRoomController extends Controller
                 'capacity' => $found->capacity,
                 'is_active' => $found->isActive,
             ],
-            'has_registered_meetings' => false,
+            'future_active_count' => $reservations->countActiveFutureByRoom($found->id, $clock->now()),
         ]);
     }
 }
