@@ -25,8 +25,8 @@ interface ReservationRepository
         int $page,
         int $perPage,
         ?string $roomId,
-        DateTimeImmutable $dayStart,
-        DateTimeImmutable $dayEndExclusive,
+        ?DateTimeImmutable $rangeStart,
+        ?DateTimeImmutable $rangeEndExclusive,
     ): array;
 
     public function hasAny(): bool;

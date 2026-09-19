@@ -21,15 +21,18 @@ class IndexReservationController extends Controller
         OccupancyRoomCatalog $rooms,
     ): Response {
         $timezone = (string) config('app.timezone');
-        $date = $request->validated('date') ?? now()->timezone($timezone)->toDateString();
+        $period = $request->validated('period') ?? 'all';
+        $startsOn = $request->validated('starts_on');
+        $endsOn = $request->validated('ends_on');
         $roomId = $request->validated('room_id');
         $page = max(1, (int) $request->query('page', 1));
 
-        $result = $listReservations->execute($page, 15, $roomId, $date, $timezone);
+        $result = $listReservations->execute($page, 15, $roomId, $period, $startsOn, $endsOn, $timezone);
         $tz = new DateTimeZone($timezone);
+        $timeFormat = $this->isSingleDayWindow($period, $startsOn, $endsOn) ? 'H:i' : 'd/m/Y H:i';
 
         $items = array_map(
-            fn (Reservation $reservation): array => $this->toListItem($reservation, $tz),
+            fn (Reservation $reservation): array => $this->toListItem($reservation, $tz, $timeFormat),
             $result['items'],
         );
 
@@ -48,7 +51,9 @@ class IndexReservationController extends Controller
             'reservations' => $paginator->toArray(),
             'filters' => [
                 'room_id' => $roomId,
-                'date' => $date,
+                'period' => $period,
+                'starts_on' => $startsOn,
+                'ends_on' => $endsOn,
             ],
             'filterRooms' => array_map(
                 fn (OccupancyRoom $room): array => [
@@ -64,7 +69,7 @@ class IndexReservationController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function toListItem(Reservation $reservation, DateTimeZone $timezone): array
+    private function toListItem(Reservation $reservation, DateTimeZone $timezone, string $timeFormat): array
     {
         $startsAt = $reservation->startsAt->setTimezone($timezone);
         $endsAt = $reservation->endsAt->setTimezone($timezone);
@@ -76,11 +81,20 @@ class IndexReservationController extends Controller
             'responsible' => $reservation->responsible,
             'title' => $reservation->title,
             'date' => $startsAt->format('d/m/Y'),
-            'starts_at' => $startsAt->format('H:i'),
-            'ends_at' => $endsAt->format('H:i'),
+            'starts_at' => $startsAt->format($timeFormat),
+            'ends_at' => $endsAt->format($timeFormat),
             'participants' => $reservation->participants,
             'status' => 'active',
             'status_label' => 'Ativa',
         ];
+    }
+
+    private function isSingleDayWindow(string $period, ?string $startsOn, ?string $endsOn): bool
+    {
+        if ($startsOn !== null && $endsOn !== null) {
+            return $startsOn === $endsOn;
+        }
+
+        return $period === 'today' || $period === 'tomorrow';
     }
 }
