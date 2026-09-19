@@ -3,9 +3,16 @@ import { useEffect, useId, useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import { cancel, visitIndex } from '../../Services/reservations';
 
+const PERIODS = [
+    { value: 'all', label: 'Todos' },
+    { value: 'today', label: 'Hoje' },
+    { value: 'tomorrow', label: 'Amanhã' },
+    { value: 'week', label: '1 semana' },
+];
+
 export default function Index({
     reservations,
-    filters = { room_id: '', date: '' },
+    filters = { room_id: '', period: 'all', starts_on: '', ends_on: '' },
     filterRooms = [],
     hasAny = false,
     loadError = false,
@@ -16,10 +23,17 @@ export default function Index({
     const failed = Boolean(loadError) || clientFailed;
     const [pending, setPending] = useState(null);
     const [cancelError, setCancelError] = useState('');
+    const [pendingPeriod, setPendingPeriod] = useState(null);
+    const [draft, setDraft] = useState(null);
     const form = useForm({});
     const backRef = useRef(null);
     const triggerRef = useRef(null);
     const titleId = useId();
+    const periodLabelId = useId();
+    const queryRangeActive = Boolean(filters.starts_on && filters.ends_on);
+    const selectedPeriod = pendingPeriod ?? filters.period ?? 'all';
+    const range = draft ?? visibleRange(filters, selectedPeriod, pendingPeriod !== null);
+    const rangeActive = (queryRangeActive && pendingPeriod === null) || Boolean(draft?.starts_on && draft?.ends_on);
 
     useEffect(() => {
         if (pending) {
@@ -71,9 +85,10 @@ export default function Index({
         }
     }
 
-    function applyFilters(next) {
+    function visitFilters(next, options) {
+        const period = next.period ?? filters.period ?? 'all';
         const query = {
-            date: next.date ?? filters.date,
+            period,
             page: 1,
         };
 
@@ -83,19 +98,62 @@ export default function Index({
             query.room_id = roomId;
         }
 
-        visitIndex(query);
+        if (!next.clearRange) {
+            const explicit = draft?.starts_on && draft?.ends_on ? draft : queryRangeActive ? filters : null;
+            const startsOn = next.starts_on === undefined ? explicit?.starts_on : next.starts_on;
+            const endsOn = next.ends_on === undefined ? explicit?.ends_on : next.ends_on;
+
+            if (startsOn && endsOn) {
+                query.starts_on = startsOn;
+                query.ends_on = endsOn;
+            }
+        }
+
+        visitIndex(query, options);
+    }
+
+    function applyPeriod(period) {
+        setPendingPeriod(period);
+        setDraft(null);
+        visitFilters({ period, clearRange: true });
+    }
+
+    function applyRangeField(field, value) {
+        const hadBoth = Boolean(range.starts_on && range.ends_on);
+
+        if (hadBoth && !value) {
+            setDraft({ starts_on: '', ends_on: '' });
+            visitFilters({ starts_on: '', ends_on: '', clearRange: true });
+
+            return;
+        }
+
+        const next = { ...range, [field]: value };
+        setDraft(next);
+
+        if (next.starts_on && next.ends_on) {
+            visitFilters({ starts_on: next.starts_on, ends_on: next.ends_on });
+        }
+    }
+
+    function applyFilters(next) {
+        visitFilters(next);
     }
 
     function clearFilters() {
-        applyFilters({ room_id: '', date: filters.date });
+        setPendingPeriod('all');
+        setDraft(null);
+        visitIndex({ period: 'all', page: 1 });
     }
 
     function retry() {
         setClientFailed(false);
         visitIndex(
             {
+                ...(filters.period ? { period: filters.period } : {}),
                 ...(filters.room_id ? { room_id: filters.room_id } : {}),
-                ...(filters.date ? { date: filters.date } : {}),
+                ...(filters.starts_on ? { starts_on: filters.starts_on } : {}),
+                ...(filters.ends_on ? { ends_on: filters.ends_on } : {}),
             },
             {
                 onError: () => setClientFailed(true),
@@ -132,36 +190,76 @@ export default function Index({
                 </Link>
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
-                <div className="sm:w-1/2">
-                    <label htmlFor="room_id" className="block text-sm font-medium text-slate-800">
-                        Sala
-                    </label>
-                    <select
-                        id="room_id"
-                        value={filters.room_id ?? ''}
-                        onChange={(event) => applyFilters({ room_id: event.target.value })}
-                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Todas as salas</option>
-                        {filterRooms.map((room) => (
-                            <option key={room.id} value={room.id}>
-                                {room.name}
-                            </option>
-                        ))}
-                    </select>
+            <div className="mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <div className="sm:w-1/2">
+                        <label htmlFor="room_id" className="block text-sm font-medium text-slate-800">
+                            Sala
+                        </label>
+                        <select
+                            id="room_id"
+                            value={filters.room_id ?? ''}
+                            onChange={(event) => applyFilters({ room_id: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Todas as salas</option>
+                            {filterRooms.map((room) => (
+                                <option key={room.id} value={room.id}>
+                                    {room.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="sm:w-1/2">
+                        <p id={periodLabelId} className="block text-sm font-medium text-slate-800">
+                            Período
+                        </p>
+                        <div
+                            role="radiogroup"
+                            aria-labelledby={periodLabelId}
+                            className="mt-1 flex min-h-10 flex-wrap items-center gap-3"
+                        >
+                            {PERIODS.map((option) => (
+                                <label key={option.value} className="inline-flex items-center gap-2 text-sm text-slate-800">
+                                    <input
+                                        type="radio"
+                                        name="period"
+                                        value={option.value}
+                                        checked={!rangeActive && selectedPeriod === option.value}
+                                        onChange={() => applyPeriod(option.value)}
+                                        className="text-blue-600 focus:ring-blue-500"
+                                    />
+                                    {option.label}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                <div className="sm:w-1/2">
-                    <label htmlFor="date" className="block text-sm font-medium text-slate-800">
-                        Data
-                    </label>
-                    <input
-                        id="date"
-                        type="date"
-                        value={filters.date ?? ''}
-                        onChange={(event) => applyFilters({ date: event.target.value })}
-                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="sm:w-1/2">
+                        <label htmlFor="starts_on" className="block text-sm font-medium text-slate-800">
+                            Data inicial
+                        </label>
+                        <input
+                            id="starts_on"
+                            type="date"
+                            value={range.starts_on}
+                            onChange={(event) => applyRangeField('starts_on', event.target.value)}
+                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="sm:w-1/2">
+                        <label htmlFor="ends_on" className="block text-sm font-medium text-slate-800">
+                            Data final
+                        </label>
+                        <input
+                            id="ends_on"
+                            type="date"
+                            value={range.ends_on}
+                            onChange={(event) => applyRangeField('ends_on', event.target.value)}
+                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -223,9 +321,6 @@ export default function Index({
                                 <thead className="bg-slate-50 text-slate-600">
                                     <tr>
                                         <th scope="col" className="px-4 py-3 font-medium">
-                                            ID
-                                        </th>
-                                        <th scope="col" className="px-4 py-3 font-medium">
                                             Sala
                                         </th>
                                         <th scope="col" className="px-4 py-3 font-medium">
@@ -254,7 +349,6 @@ export default function Index({
                                 <tbody>
                                     {data.map((reservation) => (
                                         <tr key={reservation.id} className="border-t border-slate-100">
-                                            <td className="px-4 py-3 text-slate-900">{reservation.id}</td>
                                             <td className="px-4 py-3 text-slate-900">{reservation.room_name}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.responsible}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.title}</td>
@@ -281,7 +375,6 @@ export default function Index({
                         {data.map((reservation) => (
                             <li key={reservation.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <p className="font-medium text-slate-900">{reservation.title}</p>
-                                <p className="mt-1 text-sm text-slate-700">ID: {reservation.id}</p>
                                 <p className="mt-1 text-sm text-slate-700">Sala: {reservation.room_name}</p>
                                 <p className="mt-1 text-sm text-slate-700">Responsável: {reservation.responsible}</p>
                                 <p className="mt-1 text-sm text-slate-700">
@@ -366,6 +459,48 @@ export default function Index({
             ) : null}
         </AppLayout>
     );
+}
+
+function formatYmd(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function addCalendarDays(ymd, days) {
+    const [year, month, day] = ymd.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+
+    return formatYmd(date);
+}
+
+function datesForPeriod(period) {
+    const today = formatYmd(new Date());
+
+    if (period === 'today') {
+        return { starts_on: today, ends_on: today };
+    }
+
+    if (period === 'tomorrow') {
+        return { starts_on: today, ends_on: addCalendarDays(today, 1) };
+    }
+
+    if (period === 'week') {
+        return { starts_on: today, ends_on: addCalendarDays(today, 6) };
+    }
+
+    return { starts_on: '', ends_on: '' };
+}
+
+function visibleRange(filters, period = filters.period ?? 'all', ignoreQueryRange = false) {
+    if (!ignoreQueryRange && filters.starts_on && filters.ends_on) {
+        return { starts_on: filters.starts_on, ends_on: filters.ends_on };
+    }
+
+    return datesForPeriod(period);
 }
 
 function RowActions({ reservation, onCancel }) {
