@@ -1,4 +1,3 @@
-import { createElement } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm } from '@inertiajs/react';
@@ -8,8 +7,6 @@ import Login from './Login';
 
 vi.mock('@inertiajs/react', () => ({
     useForm: vi.fn(),
-    Link: ({ href, children, className }) =>
-        createElement('a', { href, className }, children),
 }));
 
 function createForm(overrides = {}) {
@@ -78,11 +75,13 @@ describe('User/Login screen', () => {
         expect(screen.getByText('Mais produtividade para o seu time.')).toBeInTheDocument();
     });
 
-    it('shows divider Não tem uma conta? and link Ir para o cadastro with href /register', () => {
+    it('does not render Não tem uma conta?, Ir para o cadastro, or a /register link', () => {
         renderLogin();
 
-        expect(screen.getByText('Não tem uma conta?')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Ir para o cadastro' })).toHaveAttribute('href', '/register');
+        expect(screen.queryByText('Não tem uma conta?')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Ir para o cadastro' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /register/i })).not.toBeInTheDocument();
+        expect(document.querySelector('a[href="/register"]')).toBeNull();
     });
 
     it('does not render a password-recovery control', () => {
@@ -143,7 +142,9 @@ describe('User/Login screen', () => {
         expect(submit).toBeDisabled();
         expect(submit.querySelector('svg')).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Entrar' })).not.toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Ir para o cadastro' })).toBeInTheDocument();
+        expect(screen.queryByText('Não tem uma conta?')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Ir para o cadastro' })).not.toBeInTheDocument();
+        expect(document.querySelector('a[href="/register"]')).toBeNull();
     });
 
     it('does not send a second request while processing', async () => {
