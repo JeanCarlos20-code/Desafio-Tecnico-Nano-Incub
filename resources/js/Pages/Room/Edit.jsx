@@ -6,12 +6,16 @@ import RoomForm from './Components/RoomForm';
 
 const GENERAL_FAILURE = 'Não foi possível salvar a sala. Tente novamente.';
 
-export default function Edit({ room, has_registered_meetings = false }) {
+export default function Edit({ room, future_active_count = 0 }) {
     const form = useForm({
         name: room.name,
         capacity: room.capacity,
+        is_active: room.is_active,
+        scheduled_meetings_action: '',
     });
     const [generalError, setGeneralError] = useState('');
+    const [reopenDialog, setReopenDialog] = useState(false);
+    const [futureActiveCount, setFutureActiveCount] = useState(future_active_count);
 
     function showGeneralFailure() {
         setGeneralError(GENERAL_FAILURE);
@@ -22,7 +26,17 @@ export default function Edit({ room, has_registered_meetings = false }) {
     function visitOptions() {
         return {
             onError: (errors) => {
-                const first = ['name', 'capacity'].find((field) => errors[field]);
+                if (errors.scheduled_meetings_action || errors.future_active_count) {
+                    const count = Number.parseInt(errors.future_active_count, 10);
+
+                    if (Number.isFinite(count) && count > 0) {
+                        setFutureActiveCount(count);
+                    }
+
+                    setReopenDialog(true);
+                }
+
+                const first = ['name', 'capacity', 'is_active'].find((field) => errors[field]);
 
                 if (first) {
                     document.getElementById(first)?.focus();
@@ -33,43 +47,18 @@ export default function Edit({ room, has_registered_meetings = false }) {
         };
     }
 
-    function submit() {
+    function submit(action = '') {
         if (form.processing) {
             return;
         }
 
         setGeneralError('');
+        setReopenDialog(false);
         form.transform((data) => ({
             name: data.name,
             capacity: data.capacity,
-        }));
-        update(form, room.id, visitOptions());
-    }
-
-    function confirmDeactivate() {
-        if (form.processing) {
-            return;
-        }
-
-        setGeneralError('');
-        form.transform((data) => ({
-            name: data.name,
-            capacity: data.capacity,
-            is_active: false,
-        }));
-        update(form, room.id, visitOptions());
-    }
-
-    function confirmActivate() {
-        if (form.processing) {
-            return;
-        }
-
-        setGeneralError('');
-        form.transform((data) => ({
-            name: data.name,
-            capacity: data.capacity,
-            is_active: true,
+            is_active: data.is_active,
+            ...(action ? { scheduled_meetings_action: action } : {}),
         }));
         update(form, room.id, visitOptions());
     }
@@ -81,10 +70,11 @@ export default function Edit({ room, has_registered_meetings = false }) {
                 form={form}
                 generalError={generalError}
                 isActive={room.is_active}
-                hasRegisteredMeetings={has_registered_meetings}
+                futureActiveCount={futureActiveCount}
+                reopenDialog={reopenDialog}
                 onSubmit={submit}
-                onConfirmDeactivate={confirmDeactivate}
-                onConfirmActivate={confirmActivate}
+                onConfirmDeactivate={(action) => submit(action)}
+                onDismissReopen={() => setReopenDialog(false)}
             />
         </AppLayout>
     );
