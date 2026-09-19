@@ -8,39 +8,69 @@ use Tests\TestCase;
 
 class UpdateRoomRequestTest extends TestCase
 {
-    public function test_it_accepts_name_and_capacity_without_is_active(): void
+    public function test_it_requires_is_active_and_accepts_only_keep_or_cancel_for_scheduled_meetings_action(): void
     {
-        $validated = $this->validated([
+        $missingStatus = $this->validationErrors([
             'name' => 'Sala Verde',
             'capacity' => 4,
         ]);
+        $this->assertSame(['Informe o status da sala.'], $missingStatus['is_active']);
 
-        $this->assertSame('Sala Verde', $validated['name']);
-        $this->assertSame(4, $validated['capacity']);
-        $this->assertArrayNotHasKey('is_active', $validated);
+        $invalidAction = $this->validationErrors([
+            'name' => 'Sala Verde',
+            'capacity' => 4,
+            'is_active' => false,
+            'scheduled_meetings_action' => 'drop',
+        ]);
+        $this->assertSame(
+            ['Informe se as reuniões programadas devem ser mantidas ou canceladas.'],
+            $invalidAction['scheduled_meetings_action'],
+        );
+
+        $keep = $this->validated([
+            'name' => 'Sala Verde',
+            'capacity' => 4,
+            'is_active' => false,
+            'scheduled_meetings_action' => 'keep',
+        ]);
+        $this->assertFalse($keep['is_active']);
+        $this->assertSame('keep', $keep['scheduled_meetings_action']);
+
+        $cancel = $this->validated([
+            'name' => 'Sala Verde',
+            'capacity' => 4,
+            'is_active' => true,
+            'scheduled_meetings_action' => 'cancel',
+        ]);
+        $this->assertTrue($cancel['is_active']);
+        $this->assertSame('cancel', $cancel['scheduled_meetings_action']);
     }
 
     public function test_it_trims_name_and_rejects_invalid_capacity_with_the_same_messages_as_store(): void
     {
         $missingName = $this->validationErrors([
             'capacity' => 8,
+            'is_active' => true,
         ]);
         $this->assertSame(['Informe o nome da sala.'], $missingName['name']);
 
         $missingCapacity = $this->validationErrors([
             'name' => 'Sala Azul',
+            'is_active' => true,
         ]);
         $this->assertSame(['Informe a capacidade da sala.'], $missingCapacity['capacity']);
 
         $nonInteger = $this->validationErrors([
             'name' => 'Sala Azul',
             'capacity' => 'doze',
+            'is_active' => true,
         ]);
         $this->assertSame(['A capacidade deve ser um número inteiro.'], $nonInteger['capacity']);
 
         $belowMin = $this->validationErrors([
             'name' => 'Sala Azul',
             'capacity' => 0,
+            'is_active' => true,
         ]);
         $this->assertSame(['A capacidade deve ser de pelo menos 1 pessoa.'], $belowMin['capacity']);
 
@@ -53,6 +83,7 @@ class UpdateRoomRequestTest extends TestCase
         $this->assertSame('Sala Verde', $validated['name']);
         $this->assertSame(4, $validated['capacity']);
         $this->assertFalse($validated['is_active']);
+        $this->assertArrayNotHasKey('scheduled_meetings_action', $validated);
     }
 
     /**
