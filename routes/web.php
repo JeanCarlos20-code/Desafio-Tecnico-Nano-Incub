@@ -11,19 +11,12 @@ use App\Modules\Room\Infra\Http\Controllers\IndexRoomController;
 use App\Modules\Room\Infra\Http\Controllers\StoreRoomController;
 use App\Modules\Room\Infra\Http\Controllers\UpdateRoomController;
 use App\Modules\User\Infra\Http\Controllers\LoginController;
-use App\Modules\User\Infra\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'create'])->name('home');
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->name('login.store');
-
-    Route::get('/register', [UserController::class, 'create'])->name('register');
-    Route::post('/register', [UserController::class, 'store'])->name('register.store');
-
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
 });
 
 Route::middleware('auth')->group(function () {
