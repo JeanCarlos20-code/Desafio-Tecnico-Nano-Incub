@@ -1,5 +1,9 @@
 <?php
 
+use App\Modules\Reservation\Infra\Http\Controllers\CancelReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\CreateReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\IndexReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\StoreReservationController;
 use App\Modules\Room\Infra\Http\Controllers\CreateRoomController;
 use App\Modules\Room\Infra\Http\Controllers\DestroyRoomController;
 use App\Modules\Room\Infra\Http\Controllers\EditRoomController;
@@ -9,7 +13,6 @@ use App\Modules\Room\Infra\Http\Controllers\UpdateRoomController;
 use App\Modules\User\Infra\Http\Controllers\LoginController;
 use App\Modules\User\Infra\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'create'])->name('home');
@@ -26,9 +29,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-    Route::get('/reservations', function () {
-        return Inertia::render('Reservation/Index');
-    })->name('reservations.index');
+    Route::get('/reservations', IndexReservationController::class)->name('reservations.index');
+    Route::get('/reservations/create', CreateReservationController::class)->name('reservations.create');
+    Route::post('/reservations', StoreReservationController::class)->name('reservations.store');
+    Route::patch('/reservations/{reservation}/cancel', CancelReservationController::class)->name('reservations.cancel');
 
     Route::get('/rooms', IndexRoomController::class)->name('rooms.index');
     Route::get('/rooms/create', CreateRoomController::class)->name('rooms.create');
