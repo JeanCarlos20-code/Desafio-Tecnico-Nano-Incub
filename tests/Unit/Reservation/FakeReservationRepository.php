@@ -14,7 +14,7 @@ final class FakeReservationRepository implements ReservationRepository
     /** @var list<array{roomId: string, responsible: string, title: string, startsAt: DateTimeImmutable, endsAt: DateTimeImmutable, participants: int}> */
     public array $created = [];
 
-    /** @var list<array{page: int, perPage: int, roomId: ?string, dayStart: DateTimeImmutable, dayEndExclusive: DateTimeImmutable}> */
+    /** @var list<array{page: int, perPage: int, roomId: ?string, rangeStart: ?DateTimeImmutable, rangeEndExclusive: ?DateTimeImmutable}> */
     public array $listed = [];
 
     /** @var list<array{id: string, cancelledAt: DateTimeImmutable}> */
@@ -72,10 +72,10 @@ final class FakeReservationRepository implements ReservationRepository
         int $page,
         int $perPage,
         ?string $roomId,
-        DateTimeImmutable $dayStart,
-        DateTimeImmutable $dayEndExclusive,
+        ?DateTimeImmutable $rangeStart,
+        ?DateTimeImmutable $rangeEndExclusive,
     ): array {
-        $this->listed[] = compact('page', 'perPage', 'roomId', 'dayStart', 'dayEndExclusive');
+        $this->listed[] = compact('page', 'perPage', 'roomId', 'rangeStart', 'rangeEndExclusive');
 
         $items = array_values(array_filter(
             $this->reservations,

@@ -21,7 +21,7 @@ class ReservationIndexHttpTest extends TestCase
         $this->travelTo(now()->timezone((string) config('app.timezone'))->setDate(2026, 9, 21)->setTime(12, 0));
     }
 
-    public function test_authenticated_index_renders_reservation_index_with_default_date_today_and_starts_at_asc(): void
+    public function test_authenticated_index_lists_every_active_row_and_echoes_period_all(): void
     {
         $user = UserModel::factory()->create();
         $room = Room::factory()->create(['name' => 'Sala Azul']);
@@ -38,7 +38,7 @@ class ReservationIndexHttpTest extends TestCase
             'starts_at' => '2026-09-21 09:00:00',
             'ends_at' => '2026-09-21 09:30:00',
         ]);
-        Reservation::factory()->create([
+        $tomorrow = Reservation::factory()->create([
             'room_id' => $room->id,
             'title' => 'Amanha',
             'starts_at' => '2026-09-22 09:00:00',
@@ -50,19 +50,190 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
-                ->where('filters.date', '2026-09-21')
+                ->where('filters.period', 'all')
+                ->where('filters.starts_on', null)
+                ->where('filters.ends_on', null)
                 ->where('filters.room_id', null)
                 ->where('reservations.per_page', 15)
-                ->has('reservations.data', 2)
+                ->has('reservations.data', 3)
                 ->where('reservations.data.0.id', $earlier->id)
                 ->where('reservations.data.0.title', 'Manha')
-                ->where('reservations.data.0.starts_at', '09:00')
+                ->where('reservations.data.0.starts_at', '21/09/2026 09:00')
                 ->where('reservations.data.1.id', $later->id)
                 ->where('reservations.data.1.title', 'Tarde')
+                ->where('reservations.data.2.id', $tomorrow->id)
             );
     }
 
-    public function test_index_filters_by_room_and_local_day_excluding_canceled_rows(): void
+    public function test_index_period_presets_return_only_actives_in_the_local_window(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+
+        $sep20 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep20',
+            'starts_at' => '2026-09-20 09:00:00',
+            'ends_at' => '2026-09-20 09:30:00',
+        ]);
+        $sep21 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep21',
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+        $sep22 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep22',
+            'starts_at' => '2026-09-22 09:00:00',
+            'ends_at' => '2026-09-22 09:30:00',
+        ]);
+        $sep27 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep27',
+            'starts_at' => '2026-09-27 09:00:00',
+            'ends_at' => '2026-09-27 09:30:00',
+        ]);
+        $sep28 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep28',
+            'starts_at' => '2026-09-28 00:00:00',
+            'ends_at' => '2026-09-28 00:30:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/reservations?period=today')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.period', 'today')
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.id', $sep21->id)
+                ->where('reservations.data.0.starts_at', '09:00')
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?period=tomorrow')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.id', $sep22->id)
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?period=week')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('reservations.data', 3)
+                ->where('reservations.data.0.id', $sep21->id)
+                ->where('reservations.data.1.id', $sep22->id)
+                ->where('reservations.data.2.id', $sep27->id)
+            );
+
+        $this->assertDatabaseHas('reservations', ['id' => $sep20->id]);
+        $this->assertDatabaseHas('reservations', ['id' => $sep28->id]);
+    }
+
+    public function test_index_range_overrides_period_today_and_is_inclusive(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+
+        Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Today',
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+        $sep22 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep22',
+            'starts_at' => '2026-09-22 09:00:00',
+            'ends_at' => '2026-09-22 09:30:00',
+        ]);
+        $sep23 = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep23',
+            'starts_at' => '2026-09-23 23:59:59',
+            'ends_at' => '2026-09-24 00:29:59',
+        ]);
+        Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Sep24',
+            'starts_at' => '2026-09-24 00:00:00',
+            'ends_at' => '2026-09-24 00:30:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/reservations?period=today&starts_on=2026-09-22&ends_on=2026-09-23')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.period', 'today')
+                ->where('filters.starts_on', '2026-09-22')
+                ->where('filters.ends_on', '2026-09-23')
+                ->has('reservations.data', 2)
+                ->where('reservations.data.0.id', $sep22->id)
+                ->where('reservations.data.1.id', $sep23->id)
+            );
+    }
+
+    public function test_index_pagination_links_keep_period_range_and_room_id(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+
+        Reservation::factory()->count(16)->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+
+        $query = 'period=today&starts_on=2026-09-21&ends_on=2026-09-21&room_id='.$room->id;
+
+        $this->actingAs($user)
+            ->get('/reservations?'.$query.'&page=2')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.period', 'today')
+                ->where('filters.starts_on', '2026-09-21')
+                ->where('filters.ends_on', '2026-09-21')
+                ->where('filters.room_id', $room->id)
+                ->where('reservations.per_page', 15)
+                ->where('reservations.current_page', 2)
+                ->has('reservations.data', 1)
+                ->where('reservations.prev_page_url', function (?string $url) use ($room): bool {
+                    return is_string($url)
+                        && str_contains($url, 'period=today')
+                        && str_contains($url, 'starts_on=2026-09-21')
+                        && str_contains($url, 'ends_on=2026-09-21')
+                        && str_contains($url, 'room_id='.$room->id);
+                })
+            );
+    }
+
+    public function test_index_unknown_period_or_one_sided_range_returns_422(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+        Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/reservations?period=weekend')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['period']);
+
+        $this->actingAs($user)
+            ->getJson('/reservations?starts_on=2026-09-21')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['ends_on']);
+
+        $this->assertDatabaseCount('reservations', 1);
+    }
+
+    public function test_index_filters_by_room_with_the_resolved_window_and_excludes_canceled_rows(): void
     {
         $user = UserModel::factory()->create();
         $roomA = Room::factory()->create(['name' => 'Sala A']);
@@ -95,12 +266,12 @@ class ReservationIndexHttpTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/reservations?room_id='.$roomA->id.'&date=2026-09-21')
+            ->get('/reservations?room_id='.$roomA->id.'&period=today')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
                 ->where('filters.room_id', $roomA->id)
-                ->where('filters.date', '2026-09-21')
+                ->where('filters.period', 'today')
                 ->has('reservations.data', 1)
                 ->where('reservations.data.0.id', $active->id)
                 ->where('reservations.data.0.status', 'active')
@@ -149,18 +320,10 @@ class ReservationIndexHttpTest extends TestCase
             ->delete(route('rooms.destroy', $deleteRoom));
 
         $this->actingAs($user)
-            ->get('/reservations?date=2026-09-21')
+            ->get('/reservations?period=all')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
-                ->has('reservations.data', 0)
-                ->where('hasAny', false)
-            );
-
-        $this->actingAs($user)
-            ->get('/reservations?date=2026-09-22')
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
                 ->has('reservations.data', 0)
                 ->where('hasAny', false)
             );
