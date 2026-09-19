@@ -32,7 +32,7 @@ class MysqlConnectionTest extends TestCase
         ]);
 
         $this->assertSame('painel_administrativo_test', DB::connection()->getDatabaseName());
-        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('users', 4);
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'name' => 'Ada Lovelace',
