@@ -67,11 +67,9 @@ Main content:
 - supporting text `Entre para gerenciar as salas e reservas.`;
 - email field;
 - password field;
-- primary button `Entrar`;
-- divider `Não tem uma conta?`;
-- secondary control `Ir para o cadastro` that opens `/register`.
+- primary button `Entrar`.
 
-The screen must not include password recovery because it is outside the scope of the technical challenge. Administrator registration is enabled, so the login screen includes the cadastro control.
+The screen must not include password recovery or public cadastro. It must not show `Não tem uma conta?`, a control named `Ir para o cadastro`, or a link to `/register`.
 
 ## Form fields
 
@@ -174,9 +172,8 @@ An authenticated administrator who accesses `/` or `/login` must be redirected t
 | --- | --- |
 | `Entrar` button | Submits the authentication form |
 | Enter key inside a field | Submits the authentication form |
-| `Ir para o cadastro` | Navigates to `/register` |
 
-There is no password recovery link because password recovery is not required by the challenge.
+There is no password recovery link and no cadastro navigation because those flows are not part of the product.
 
 ## Security requirements
 
@@ -250,7 +247,7 @@ There is no password recovery link because password recovery is not required by 
 
 - [ ] The page is available at `/` and `/login` for unauthenticated users.
 - [ ] Authenticated users who access `/` or `/login` are redirected to `/reservations`.
-- [ ] The login screen includes `Ir para o cadastro`, which navigates to `/register`.
+- [ ] The login screen does not show cadastro copy or a link to `/register`.
 - [ ] Email and password are required.
 - [ ] Laravel validation errors are displayed next to their corresponding fields.
 - [ ] Invalid credentials produce a generic error message.
