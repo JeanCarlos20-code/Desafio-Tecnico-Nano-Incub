@@ -49,6 +49,7 @@ final class EloquentReservationRepository implements ReservationRepository
     ): array {
         $query = ReservationModel::query()
             ->with('room')
+            ->whereNull('cancelled_at')
             ->where('starts_at', '>=', $dayStart)
             ->where('starts_at', '<', $dayEndExclusive)
             ->when($roomId, fn ($builder) => $builder->where('room_id', $roomId))
@@ -66,7 +67,7 @@ final class EloquentReservationRepository implements ReservationRepository
 
     public function hasAny(): bool
     {
-        return ReservationModel::query()->exists();
+        return ReservationModel::query()->whereNull('cancelled_at')->exists();
     }
 
     public function findById(string $id): ?Reservation
@@ -78,9 +79,50 @@ final class EloquentReservationRepository implements ReservationRepository
 
     public function markCanceled(string $id, DateTimeImmutable $cancelledAt): void
     {
-        ReservationModel::query()->whereKey($id)->update([
+        ReservationModel::query()->whereKey($id)->whereNull('cancelled_at')->update([
             'cancelled_at' => $cancelledAt,
         ]);
+    }
+
+    public function countActiveFutureByRoom(string $roomId, DateTimeImmutable $now): int
+    {
+        return ReservationModel::query()
+            ->where('room_id', $roomId)
+            ->whereNull('cancelled_at')
+            ->where('starts_at', '>', $now)
+            ->count();
+    }
+
+    public function countByRoomIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return ReservationModel::query()
+            ->whereIn('room_id', $ids)
+            ->selectRaw('room_id, count(*) as aggregate')
+            ->groupBy('room_id')
+            ->pluck('aggregate', 'room_id')
+            ->map(fn (mixed $count): int => (int) $count)
+            ->all();
+    }
+
+    public function cancelActiveFutureByRoom(string $roomId, DateTimeImmutable $now, DateTimeImmutable $cancelledAt): void
+    {
+        ReservationModel::query()
+            ->where('room_id', $roomId)
+            ->whereNull('cancelled_at')
+            ->where('starts_at', '>', $now)
+            ->update(['cancelled_at' => $cancelledAt]);
+    }
+
+    public function cancelAllActiveByRoom(string $roomId, DateTimeImmutable $cancelledAt): void
+    {
+        ReservationModel::query()
+            ->where('room_id', $roomId)
+            ->whereNull('cancelled_at')
+            ->update(['cancelled_at' => $cancelledAt]);
     }
 
     private function toDomain(ReservationModel $model): Reservation

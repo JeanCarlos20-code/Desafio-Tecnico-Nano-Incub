@@ -34,4 +34,16 @@ interface ReservationRepository
     public function findById(string $id): ?Reservation;
 
     public function markCanceled(string $id, DateTimeImmutable $cancelledAt): void;
+
+    public function countActiveFutureByRoom(string $roomId, DateTimeImmutable $now): int;
+
+    /**
+     * @param  list<string>  $ids
+     * @return array<string, int>
+     */
+    public function countByRoomIds(array $ids): array;
+
+    public function cancelActiveFutureByRoom(string $roomId, DateTimeImmutable $now, DateTimeImmutable $cancelledAt): void;
+
+    public function cancelAllActiveByRoom(string $roomId, DateTimeImmutable $cancelledAt): void;
 }
