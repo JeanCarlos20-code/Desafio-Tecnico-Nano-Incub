@@ -18,7 +18,9 @@ class IndexReservationRequest extends FormRequest
     {
         return [
             'room_id' => ['nullable', 'uuid'],
-            'date' => ['nullable', 'date_format:Y-m-d'],
+            'period' => ['sometimes', 'in:all,today,tomorrow,week'],
+            'starts_on' => ['nullable', 'date_format:Y-m-d', 'required_with:ends_on'],
+            'ends_on' => ['nullable', 'date_format:Y-m-d', 'required_with:starts_on', 'after_or_equal:starts_on'],
         ];
     }
 
@@ -29,7 +31,12 @@ class IndexReservationRequest extends FormRequest
     {
         return [
             'room_id.uuid' => 'Selecione uma sala válida.',
-            'date.date_format' => 'Informe uma data válida.',
+            'period.in' => 'Informe um período válido.',
+            'starts_on.date_format' => 'Informe uma data inicial válida.',
+            'starts_on.required_with' => 'Informe a data inicial e a data final.',
+            'ends_on.date_format' => 'Informe uma data final válida.',
+            'ends_on.required_with' => 'Informe a data inicial e a data final.',
+            'ends_on.after_or_equal' => 'A data final deve ser igual ou posterior à data inicial.',
         ];
     }
 }
