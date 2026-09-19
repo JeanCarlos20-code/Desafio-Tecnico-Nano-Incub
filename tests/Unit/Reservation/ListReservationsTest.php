@@ -40,7 +40,30 @@ class ListReservationsTest extends TestCase
         $this->assertSame(0, $result['total']);
     }
 
-    private function reservation(string $id): Reservation
+    public function test_list_and_has_any_exclude_rows_with_cancelled_at_set(): void
+    {
+        $reservations = new FakeReservationRepository;
+        $reservations->seed($this->reservation('active-1'));
+        $reservations->seed($this->reservation('canceled-1', new DateTimeImmutable('2026-09-21 08:00:00')));
+
+        $result = (new ListReservations($reservations))->execute(1, 15, null, '2026-09-21', 'UTC');
+
+        $this->assertTrue($result['hasAny']);
+        $this->assertSame(1, $result['total']);
+        $this->assertCount(1, $result['items']);
+        $this->assertSame('active-1', $result['items'][0]->id);
+
+        $onlyCanceled = new FakeReservationRepository;
+        $onlyCanceled->seed($this->reservation('canceled-only', new DateTimeImmutable('2026-09-21 08:00:00')));
+
+        $empty = (new ListReservations($onlyCanceled))->execute(1, 15, null, '2026-09-21', 'UTC');
+
+        $this->assertFalse($empty['hasAny']);
+        $this->assertSame(0, $empty['total']);
+        $this->assertSame([], $empty['items']);
+    }
+
+    private function reservation(string $id, ?DateTimeImmutable $cancelledAt = null): Reservation
     {
         return new Reservation(
             id: $id,
@@ -50,7 +73,7 @@ class ListReservationsTest extends TestCase
             startsAt: new DateTimeImmutable('2026-09-21 10:00:00'),
             endsAt: new DateTimeImmutable('2026-09-21 10:30:00'),
             participants: 2,
-            cancelledAt: null,
+            cancelledAt: $cancelledAt,
             createdAt: new DateTimeImmutable('2026-09-21 08:00:00'),
             updatedAt: new DateTimeImmutable('2026-09-21 08:00:00'),
         );
