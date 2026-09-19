@@ -29,6 +29,8 @@ function createForm(room, overrides = {}) {
         data: {
             name: room.name,
             capacity: room.capacity,
+            is_active: room.is_active,
+            scheduled_meetings_action: '',
             ...overrides.data,
         },
         errors: overrides.errors ?? {},
@@ -38,6 +40,10 @@ function createForm(room, overrides = {}) {
         transform: vi.fn(),
         ...overrides,
     };
+
+    form.setData.mockImplementation((key, value) => {
+        form.data[key] = value;
+    });
 
     form.transform.mockImplementation((callback) => {
         form.lastTransform = callback;
@@ -63,7 +69,7 @@ function renderEdit(room = activeRoom, pageProps = {}, formOverrides = {}) {
     useForm.mockReturnValue(form);
     mockPage(room);
 
-    return { form, ...render(<Edit room={room} {...pageProps} />) };
+    return { form, ...render(<Edit room={room} future_active_count={0} {...pageProps} />) };
 }
 
 afterEach(() => {
@@ -76,160 +82,108 @@ beforeEach(() => {
 });
 
 describe('Room/Edit', () => {
-    it('prefills name and capacity, shows read-only Ativa or Inativa, and reuses the shared form', () => {
-        renderEdit(activeRoom);
-
-        expect(screen.getByRole('heading', { name: 'Editar sala' })).toBeInTheDocument();
-        expect(screen.getByText('Atualize as informações da sala de reunião.')).toBeInTheDocument();
-        expect(screen.getByLabelText(/Nome/)).toHaveValue('Sala Azul');
-        expect(screen.getByLabelText(/Capacidade/)).toHaveValue(10);
-        expect(screen.getByLabelText(/Nome/)).toHaveAttribute('aria-required', 'true');
-        expect(screen.getByLabelText(/Capacidade/)).toHaveAttribute('aria-required', 'true');
-        expect(screen.getByText('Status')).toBeInTheDocument();
-        expect(screen.getByText('Ativa')).toBeInTheDocument();
-        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('Situação')).not.toBeInTheDocument();
-        expect(screen.queryByText('id-1')).not.toBeInTheDocument();
-        expect(useForm).toHaveBeenCalledWith({ name: 'Sala Azul', capacity: 10 });
-    });
-
-    it('shows Desativar sala while the room is active and opens confirmation before any PUT', async () => {
+    it('opens the deactivation dialog with keep default and submits scheduled_meetings_action only after Desativar', async () => {
         const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom);
+        const { form } = renderEdit(activeRoom, { future_active_count: 2 }, { data: { is_active: false } });
 
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
         expect(form.put).not.toHaveBeenCalled();
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Desativar sala?' })).toBeInTheDocument();
-    });
-
-    it('keeps radio Desativar sala sem reunião selected and hides meeting questions when has_registered_meetings is false', async () => {
-        const user = userEvent.setup();
-        renderEdit(activeRoom, { has_registered_meetings: false });
-
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
-
-        expect(screen.getByLabelText('Desativar sala sem reunião')).toBeChecked();
-        expect(screen.queryByLabelText('Manter reuniões programadas')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('Cancelar reuniões programadas')).not.toBeInTheDocument();
-    });
-
-    it('shows keep/cancel meeting radios and hides Desativar sala sem reunião when has_registered_meetings is true', async () => {
-        const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom, { has_registered_meetings: true });
-
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
-
+        expect(screen.getByText('O que deseja fazer com as reuniões programadas?')).toBeInTheDocument();
         expect(screen.getByLabelText('Manter reuniões programadas')).toBeChecked();
-        expect(screen.getByLabelText('Cancelar reuniões programadas')).toBeInTheDocument();
-        expect(screen.queryByLabelText('Desativar sala sem reunião')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Cancelar reuniões programadas')).not.toBeChecked();
 
-        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Desativar' }));
-
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10 })).toEqual({
-            name: 'Sala Azul',
-            capacity: 10,
-            is_active: false,
-        });
-    });
-
-    it('puts name, capacity, and is_active false once on confirmed deactivation', async () => {
-        const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom);
-
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
+        await user.click(screen.getByLabelText('Cancelar reuniões programadas'));
         await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Desativar' }));
 
         expect(form.put).toHaveBeenCalledTimes(1);
         expect(form.put).toHaveBeenCalledWith('/rooms/id-1', expect.any(Object));
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10 })).toEqual({
+        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10, is_active: false })).toEqual({
             name: 'Sala Azul',
             capacity: 10,
             is_active: false,
+            scheduled_meetings_action: 'cancel',
         });
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10 })).not.toHaveProperty('keep_meetings');
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10 })).not.toHaveProperty('reservations');
     });
 
-    it('puts only name and capacity on Salvar and does not send is_active', async () => {
+    it('shows the inline Inativa warning and hides it when Status is Ativa', async () => {
         const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom);
+        const { rerender } = renderEdit(activeRoom, {}, { data: { is_active: false } });
+
+        expect(screen.getByText(/Ao desativar esta sala, novas reservas serão bloqueadas/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Status/)).toHaveValue('false');
+
+        const form = createForm(activeRoom, { data: { is_active: true } });
+        useForm.mockReturnValue(form);
+        rerender(<Edit room={activeRoom} future_active_count={0} />);
+
+        expect(screen.queryByText(/Ao desativar esta sala, novas reservas serão bloqueadas/)).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/Status/)).toHaveValue('true');
+
+        await user.selectOptions(screen.getByLabelText(/Status/), 'false');
+        expect(form.setData).toHaveBeenCalledWith('is_active', false);
+    });
+
+    it('saves without a dialog when there are no future actives', async () => {
+        const user = userEvent.setup();
+        const { form } = renderEdit(activeRoom, { future_active_count: 0 }, { data: { is_active: false } });
 
         await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(form.put).toHaveBeenCalledTimes(1);
-        expect(form.put).toHaveBeenCalledWith('/rooms/id-1', expect.any(Object));
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10, is_active: true })).toEqual({
+        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10, is_active: false })).toEqual({
             name: 'Sala Azul',
             capacity: 10,
+            is_active: false,
         });
-        expect(Object.keys(form.data).sort()).toEqual(['capacity', 'name']);
     });
 
-    it('closes the confirmation from Cancelar without putting', async () => {
+    it('does not open the dialog when the room is already inactive', async () => {
         const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom);
+        const { form } = renderEdit(inactiveRoom, { future_active_count: 3 });
 
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(form.put).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the confirmation from Cancelar or Escape without putting', async () => {
+        const user = userEvent.setup();
+        const { form } = renderEdit(activeRoom, { future_active_count: 1 }, { data: { is_active: false } });
+
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
         await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(form.put).not.toHaveBeenCalled();
-        expect(screen.getByRole('button', { name: 'Desativar sala' })).toHaveFocus();
-    });
+        expect(screen.getByRole('button', { name: 'Salvar' })).toHaveFocus();
 
-    it('closes the confirmation from Escape without putting', async () => {
-        const user = userEvent.setup();
-        const { form } = renderEdit(activeRoom);
-
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
         await user.keyboard('{Escape}');
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(form.put).not.toHaveBeenCalled();
-        expect(screen.getByRole('button', { name: 'Desativar sala' })).toHaveFocus();
     });
 
-    it('hides Desativar sala and shows Ativar sala when the room is already inactive', async () => {
+    it('reopens the dialog when the backend returns a 422 decision error', async () => {
         const user = userEvent.setup();
-        const { form } = renderEdit(inactiveRoom);
+        const { form } = renderEdit(activeRoom, { future_active_count: 0 }, { data: { is_active: false } });
 
-        expect(screen.getByText('Inativa')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Desativar sala' })).not.toBeInTheDocument();
-
-        await user.click(screen.getByRole('button', { name: 'Ativar sala' }));
-
-        expect(screen.queryByLabelText('Desativar sala sem reunião')).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('Manter reuniões programadas')).not.toBeInTheDocument();
-
-        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Ativar' }));
-
-        expect(form.put).toHaveBeenCalledTimes(1);
-        expect(form.lastTransform({ name: 'Sala Azul', capacity: 10 })).toEqual({
-            name: 'Sala Azul',
-            capacity: 10,
-            is_active: true,
+        form.put.mockImplementation((_url, options) => {
+            options.onError({
+                scheduled_meetings_action: 'Informe o que deseja fazer com as reuniões programadas.',
+                future_active_count: '2',
+            });
         });
-    });
 
-    it('shows Desativando... and does not send a second PUT while deactivation is processing', async () => {
-        const user = userEvent.setup();
-        const { form, rerender } = renderEdit(activeRoom);
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-        await user.click(screen.getByRole('button', { name: 'Desativar sala' }));
-        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Desativar' }));
-
-        form.processing = true;
-        useForm.mockReturnValue(form);
-        rerender(<Edit room={activeRoom} />);
-
-        const confirm = screen.getByRole('button', { name: 'Desativando...' });
-        expect(confirm).toBeDisabled();
-        expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' })).toBeDisabled();
-
-        await user.click(confirm);
-
-        expect(form.put).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByText(/Há 2 reuniões futuras/)).toBeInTheDocument();
+        expect(screen.getByLabelText('Manter reuniões programadas')).toBeChecked();
     });
 });
