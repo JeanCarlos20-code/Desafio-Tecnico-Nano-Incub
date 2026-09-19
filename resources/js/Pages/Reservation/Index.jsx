@@ -385,7 +385,7 @@ function RowActions({ reservation, onCancel }) {
 }
 
 function StatusBadge({ active, label }) {
-    const text = label || (active ? 'Ativa' : 'Cancelada');
+    const text = label || (active ? 'Ativa' : 'Ativa');
 
     return (
         <span
