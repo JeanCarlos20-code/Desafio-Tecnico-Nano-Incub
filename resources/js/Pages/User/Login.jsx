@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { login } from '../../Services/session';
 import BrandPanel, { Wordmark } from './Components/BrandPanel';
@@ -110,19 +110,6 @@ export default function Login() {
                             'Entrar'
                         )}
                     </button>
-
-                    <div className="mt-8 flex items-center gap-3 text-sm text-slate-400">
-                        <span className="h-px flex-1 bg-slate-200" />
-                        Não tem uma conta?
-                        <span className="h-px flex-1 bg-slate-200" />
-                    </div>
-
-                    <Link
-                        href="/register"
-                        className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-sky-200 bg-white px-4 py-3 text-sm font-semibold text-blue-600 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Ir para o cadastro
-                    </Link>
                 </form>
             </div>
         </div>
