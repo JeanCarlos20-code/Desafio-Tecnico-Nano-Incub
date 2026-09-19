@@ -55,12 +55,58 @@ class RoomIndexHttpTest extends TestCase
                 ->where('rooms.data.1.status', $ordered[1]->is_active ? 'Ativa' : 'Inativa')
                 ->where('rooms.total', 2)
                 ->where('rooms.per_page', 15)
+                ->where('filters.status', 'all')
+                ->where('hasAny', true)
+                ->where('rooms.data.0.has_reservations', false)
             );
 
         $names = Room::query()->orderBy('id')->pluck('name')->all();
         $this->assertContains('Sala A', $names);
         $this->assertContains('Sala B', $names);
         $this->assertNotContains('Sala Excluida', $names);
+    }
+
+    public function test_index_filters_status_all_active_inactive_and_omits_soft_deleted_rooms(): void
+    {
+        $user = UserModel::factory()->create();
+        $active = Room::factory()->create(['name' => 'Ativa', 'is_active' => true]);
+        $inactive = Room::factory()->create(['name' => 'Inativa', 'is_active' => false]);
+        $trashed = Room::factory()->create(['name' => 'Excluida']);
+        $trashed->delete();
+
+        $this->actingAs($user)
+            ->get('/rooms?status=all')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Room/Index')
+                ->where('filters.status', 'all')
+                ->has('rooms.data', 2)
+                ->where('hasAny', true)
+            );
+
+        $this->actingAs($user)
+            ->get('/rooms?status=active')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'active')
+                ->has('rooms.data', 1)
+                ->where('rooms.data.0.id', $active->id)
+                ->where('hasAny', true)
+            );
+
+        $this->actingAs($user)
+            ->get('/rooms?status=inactive')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'inactive')
+                ->has('rooms.data', 1)
+                ->where('rooms.data.0.id', $inactive->id)
+            );
+
+        $this->actingAs($user)
+            ->get('/rooms?status=archived')
+            ->assertRedirect()
+            ->assertSessionHasErrors(['status']);
     }
 
     public function test_index_paginates_by_15_and_keeps_query_parameters_on_links(): void

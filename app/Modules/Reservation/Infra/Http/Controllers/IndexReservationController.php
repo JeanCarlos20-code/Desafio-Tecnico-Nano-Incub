@@ -68,7 +68,6 @@ class IndexReservationController extends Controller
     {
         $startsAt = $reservation->startsAt->setTimezone($timezone);
         $endsAt = $reservation->endsAt->setTimezone($timezone);
-        $canceled = $reservation->cancelledAt !== null;
 
         return [
             'id' => $reservation->id,
@@ -80,8 +79,8 @@ class IndexReservationController extends Controller
             'starts_at' => $startsAt->format('H:i'),
             'ends_at' => $endsAt->format('H:i'),
             'participants' => $reservation->participants,
-            'status' => $canceled ? 'canceled' : 'active',
-            'status_label' => $canceled ? 'Cancelada' : 'Ativa',
+            'status' => 'active',
+            'status_label' => 'Ativa',
         ];
     }
 }

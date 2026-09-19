@@ -20,19 +20,29 @@ final class FakeRoomRepository implements RoomRepository
     /** @var list<string> */
     public array $deleted = [];
 
-    /** @var list<array{page: int, perPage: int}> */
+    /** @var list<array{page: int, perPage: int, status: string}> */
     public array $listed = [];
+
+    /** @var list<string> */
+    public array $locked = [];
 
     public function seed(Room $room): void
     {
         $this->rooms[$room->id] = $room;
     }
 
-    public function listPage(int $page, int $perPage): array
+    public function listPage(int $page, int $perPage, string $status = 'all'): array
     {
-        $this->listed[] = compact('page', 'perPage');
+        $this->listed[] = compact('page', 'perPage', 'status');
 
         $items = array_values($this->rooms);
+
+        if ($status === 'active') {
+            $items = array_values(array_filter($items, fn (Room $room): bool => $room->isActive));
+        } elseif ($status === 'inactive') {
+            $items = array_values(array_filter($items, fn (Room $room): bool => ! $room->isActive));
+        }
+
         usort($items, fn (Room $left, Room $right): int => strcmp($left->id, $right->id));
 
         $offset = ($page - 1) * $perPage;
@@ -46,6 +56,18 @@ final class FakeRoomRepository implements RoomRepository
     public function findById(string $id): ?Room
     {
         return $this->rooms[$id] ?? null;
+    }
+
+    public function lockById(string $id): ?Room
+    {
+        $this->locked[] = $id;
+
+        return $this->rooms[$id] ?? null;
+    }
+
+    public function hasAny(): bool
+    {
+        return $this->rooms !== [];
     }
 
     public function create(string $name, int $capacity, bool $isActive): Room

@@ -19,7 +19,8 @@ class UpdateRoomRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'capacity' => ['required', 'integer', 'min:1'],
-            'is_active' => ['sometimes', 'boolean'],
+            'is_active' => ['required', 'boolean'],
+            'scheduled_meetings_action' => ['sometimes', 'nullable', 'in:keep,cancel'],
         ];
     }
 
@@ -33,6 +34,9 @@ class UpdateRoomRequest extends FormRequest
             'capacity.required' => 'Informe a capacidade da sala.',
             'capacity.integer' => 'A capacidade deve ser um número inteiro.',
             'capacity.min' => 'A capacidade deve ser de pelo menos 1 pessoa.',
+            'is_active.required' => 'Informe o status da sala.',
+            'is_active.boolean' => 'Informe um status válido.',
+            'scheduled_meetings_action.in' => 'Informe se as reuniões programadas devem ser mantidas ou canceladas.',
         ];
     }
 

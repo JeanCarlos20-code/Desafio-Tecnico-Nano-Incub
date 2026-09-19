@@ -21,6 +21,7 @@ class CreateReservationController extends Controller
                 ],
                 $rooms->listActiveForCreate(),
             ),
+            'timezone' => (string) config('app.timezone'),
         ]);
     }
 }
