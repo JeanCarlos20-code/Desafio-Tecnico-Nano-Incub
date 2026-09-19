@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Room;
 
+use App\Modules\Reservation\Infra\Database\Models\Reservation;
 use App\Modules\Room\Infra\Database\Models\Room;
 use App\Modules\User\Infra\Database\Models\User as UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,6 +48,39 @@ class RoomDestroyHttpTest extends TestCase
                 ->has('rooms.data', 1)
                 ->where('rooms.data.0.id', $kept->id)
             );
+    }
+
+    public function test_destroy_cancels_all_actives_soft_deletes_the_room_and_keeps_reservation_rows(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create(['name' => 'Sala Azul']);
+        $future = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDay()->addMinutes(30),
+        ]);
+        $already = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addMinutes(30),
+            'cancelled_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.index'))
+            ->delete(route('rooms.destroy', $room))
+            ->assertRedirect(route('rooms.index'))
+            ->assertSessionHas('success', 'Sala excluída com sucesso.');
+
+        $this->assertSoftDeleted('rooms', ['id' => $room->id]);
+        $this->assertNotNull($future->fresh()->cancelled_at);
+        $this->assertNotNull($already->fresh());
+        $this->assertSame(
+            $already->cancelled_at->format('Y-m-d H:i:s'),
+            $already->fresh()->cancelled_at->format('Y-m-d H:i:s'),
+        );
+        $this->assertDatabaseHas('reservations', ['id' => $future->id]);
+        $this->assertDatabaseHas('reservations', ['id' => $already->id]);
     }
 
     #[DataProvider('missingRoomActions')]
