@@ -9,6 +9,9 @@ import Edit from './Edit';
 vi.mock('@inertiajs/react', () => ({
     useForm: vi.fn(),
     usePage: vi.fn(),
+    router: {
+        on: vi.fn(() => vi.fn()),
+    },
     Link: ({ href, children, className, ...props }) => createElement('a', { href, className, ...props }, children),
 }));
 
