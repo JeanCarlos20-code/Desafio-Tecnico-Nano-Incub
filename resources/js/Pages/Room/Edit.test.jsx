@@ -169,6 +169,19 @@ describe('Room/Edit', () => {
         expect(form.put).not.toHaveBeenCalled();
     });
 
+    it('shows the singular capacity-reduction sentence on the Capacidade field', () => {
+        const sentence =
+            'Não é possível reduzir a capacidade. Existe 1 reunião marcada com mais participantes do que a nova capacidade. Altere essa reunião primeiro e depois volte.';
+
+        renderEdit(activeRoom, {}, { errors: { capacity: sentence } });
+
+        expect(screen.getByText(sentence)).toHaveAttribute('id', 'capacity-error');
+        expect(screen.getByLabelText(/Capacidade/)).toHaveAttribute('aria-describedby', 'capacity-error');
+        expect(screen.getByLabelText(/Capacidade/)).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.getByRole('heading', { name: 'Editar sala' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+    });
+
     it('reopens the dialog when the backend returns a 422 decision error', async () => {
         const user = userEvent.setup();
         const { form } = renderEdit(activeRoom, { future_active_count: 0 }, { data: { is_active: false } });

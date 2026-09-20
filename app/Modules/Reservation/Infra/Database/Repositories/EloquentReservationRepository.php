@@ -97,6 +97,16 @@ final class EloquentReservationRepository implements ReservationRepository
             ->count();
     }
 
+    public function countActiveFutureExceedingCapacity(string $roomId, DateTimeImmutable $now, int $capacity): int
+    {
+        return ReservationModel::query()
+            ->where('room_id', $roomId)
+            ->whereNull('cancelled_at')
+            ->where('starts_at', '>', $now)
+            ->where('participants', '>', $capacity)
+            ->count();
+    }
+
     public function countByRoomIds(array $ids): array
     {
         if ($ids === []) {

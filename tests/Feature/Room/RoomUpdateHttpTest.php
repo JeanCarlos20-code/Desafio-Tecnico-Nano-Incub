@@ -169,6 +169,181 @@ class RoomUpdateHttpTest extends TestCase
         $this->assertNull($future->fresh()->cancelled_at);
     }
 
+    public function test_put_reducing_capacity_below_a_future_meeting_returns_the_capacity_error_and_writes_nothing(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create([
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => true,
+        ]);
+        $future = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-22 10:00:00',
+            'ends_at' => '2026-09-22 10:30:00',
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.edit', $room))
+            ->put(route('rooms.update', $room), [
+                'name' => 'Sala Verde',
+                'capacity' => 8,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('rooms.edit', $room))
+            ->assertSessionHasErrors([
+                'capacity' => 'Não é possível reduzir a capacidade. Existe 1 reunião marcada com mais participantes do que a nova capacidade. Altere essa reunião primeiro e depois volte.',
+            ]);
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => 1,
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $future->id,
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+    }
+
+    public function test_put_reducing_capacity_below_two_future_meetings_returns_the_plural_capacity_error(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create([
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => true,
+        ]);
+        $first = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-22 10:00:00',
+            'ends_at' => '2026-09-22 10:30:00',
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+        $second = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-23 10:00:00',
+            'ends_at' => '2026-09-23 10:30:00',
+            'participants' => 9,
+            'cancelled_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.edit', $room))
+            ->put(route('rooms.update', $room), [
+                'name' => 'Sala Verde',
+                'capacity' => 8,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('rooms.edit', $room))
+            ->assertSessionHasErrors([
+                'capacity' => 'Não é possível reduzir a capacidade. Existem 2 reuniões marcadas com mais participantes do que a nova capacidade. Altere essas reuniões primeiro e depois volte.',
+            ]);
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => 1,
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $first->id,
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $second->id,
+            'participants' => 9,
+            'cancelled_at' => null,
+        ]);
+    }
+
+    public function test_put_reducing_capacity_succeeds_when_every_future_active_fits(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create([
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => true,
+        ]);
+        $future = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-22 10:00:00',
+            'ends_at' => '2026-09-22 10:30:00',
+            'participants' => 8,
+            'cancelled_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.edit', $room))
+            ->put(route('rooms.update', $room), [
+                'name' => 'Sala Verde',
+                'capacity' => 8,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('rooms.index'))
+            ->assertSessionHas('success', 'Sala atualizada com sucesso.');
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'name' => 'Sala Verde',
+            'capacity' => 8,
+            'is_active' => 1,
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $future->id,
+            'participants' => 8,
+            'cancelled_at' => null,
+        ]);
+    }
+
+    public function test_put_capacity_conflict_and_deactivate_without_action_returns_only_the_capacity_error(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create([
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => true,
+        ]);
+        $future = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'starts_at' => '2026-09-22 10:00:00',
+            'ends_at' => '2026-09-22 10:30:00',
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('rooms.edit', $room))
+            ->put(route('rooms.update', $room), [
+                'name' => 'Sala Verde',
+                'capacity' => 8,
+                'is_active' => false,
+            ])
+            ->assertRedirect(route('rooms.edit', $room))
+            ->assertSessionHasErrors([
+                'capacity' => 'Não é possível reduzir a capacidade. Existe 1 reunião marcada com mais participantes do que a nova capacidade. Altere essa reunião primeiro e depois volte.',
+            ])
+            ->assertSessionDoesntHaveErrors(['scheduled_meetings_action', 'future_active_count']);
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => 1,
+        ]);
+        $this->assertDatabaseHas('reservations', [
+            'id' => $future->id,
+            'participants' => 10,
+            'cancelled_at' => null,
+        ]);
+    }
+
     public function test_update_validation_failure_leaves_persisted_data_unchanged(): void
     {
         $user = UserModel::factory()->create();

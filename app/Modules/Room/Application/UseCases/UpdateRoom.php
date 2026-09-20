@@ -5,6 +5,7 @@ namespace App\Modules\Room\Application\UseCases;
 use App\Modules\Reservation\Application\Transaction;
 use App\Modules\Reservation\Domain\Clock;
 use App\Modules\Reservation\Domain\Repositories\ReservationRepository;
+use App\Modules\Room\Application\Errors\CapacityReductionBlocked;
 use App\Modules\Room\Application\Errors\DeactivationDecisionRequired;
 use App\Modules\Room\Application\Errors\RoomNotFound;
 use App\Modules\Room\Domain\Entities\Room;
@@ -40,6 +41,18 @@ final class UpdateRoom
 
             if ($existing === null) {
                 throw new RoomNotFound;
+            }
+
+            if ($capacity < $existing->capacity) {
+                $conflictingCount = $this->reservations->countActiveFutureExceedingCapacity(
+                    $id,
+                    $this->clock->now(),
+                    $capacity,
+                );
+
+                if ($conflictingCount > 0) {
+                    throw new CapacityReductionBlocked($conflictingCount);
+                }
             }
 
             $flash = self::FLASH_UPDATED;
