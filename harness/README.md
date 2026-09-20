@@ -93,6 +93,8 @@ Na branch de trabalho do usuário, por exemplo `feature/desafio-salas`:
 harness task start "implementar criação de reservas"
 ```
 
+Não chame `task start` enquanto uma action `kind=human` estiver aberta. Classifique o relato nesse gate: adição/substituição espera aceite explícito; ajuste local usa `revise-code` (commit) ou `revise-plan` (plano); relato solto não abre task. `task start` só depois de aceite explícito de uma sugestão classificada, ou de um pedido claro de trabalho novo sem gate humano aberto.
+
 O harness cria:
 
 ```text
@@ -209,7 +211,7 @@ harness:
 ---
 ```
 
-O gate humano mostra o plano, depois os testes pontuais (unit / integration / e2e), depois os comandos que rodam após o Execute.
+O orquestrador cola o `summary` do CLI na íntegra (plano + testes pontuais + comandos após o Execute) e pergunta se o humano aprova o plano. Não reescreve nem corta seções. Se o plano não tiver testes novos, a seção de testes é a frase `sem testes para esse plano pois ele é apenas ...` em vez de listas vazias por nível.
 
 Aprovar:
 
@@ -260,6 +262,8 @@ Blocker/High devolve a Execute/Repair. Check obrigatório vermelho **não** inic
 ## Gate 2 — antes do commit
 
 Depois de checks verdes + review aprovada, o LangGraph interrompe novamente. O action mostra worktree, diff stat, review e comandos para inspecionar o código.
+
+Não chame `task start` enquanto este gate humano estiver aberto. Classifique o relato no gate atual e espere aceite em adição/substituição. Relato solto não abre task.
 
 Mudança simples / local (ainda no contrato original: layout, popup na tela já planejada, teste dos ACs existentes, copy, rename, bugfix) chama `revise-code` imediatamente, sem sugestão. Sugestão só se a mudança refizer a tarefa ou adicionar outra tarefa. Adição de escopo (pedido original ainda desejado) sugere mergear esta task e iniciar uma nova só com o extra: aceite é `approve-commit` e depois `harness task start`; recusa é `revise-code`. Substituição quase completa do pedido original sugere cancelar sem merge (limpa worktree, branch não mergeada e action) e iniciar uma nova task que replaneja; aceite é `cancel` e depois `start`; recusa é `revise-code`. Não existe comando `restart`.
 

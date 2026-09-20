@@ -265,6 +265,7 @@ class HarnessGraph:
             "tests_not_applicable": {
                 level: reason for level, reason in plan.planned_tests.skipped
             },
+            "tests_not_applicable_reason": plan.tests_not_applicable_reason,
             "gates": [
                 {"id": item.id, "command": item.command, "required": item.required}
                 for item in plan.gates
