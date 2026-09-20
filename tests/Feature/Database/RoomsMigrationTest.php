@@ -23,5 +23,10 @@ class RoomsMigrationTest extends TestCase
         }
 
         $this->assertFalse(Schema::hasColumn('rooms', 'location'));
+
+        $id = collect(Schema::getColumns('rooms'))->firstWhere('name', 'id');
+        $this->assertNotNull($id);
+        $this->assertSame('bigint', $id['type_name']);
+        $this->assertTrue($id['auto_increment']);
     }
 }

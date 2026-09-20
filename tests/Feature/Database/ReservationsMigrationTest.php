@@ -34,5 +34,22 @@ class ReservationsMigrationTest extends TestCase
         }
 
         $this->assertFalse(Schema::hasColumn('reservations', 'deleted_at'));
+
+        $id = collect(Schema::getColumns('reservations'))->firstWhere('name', 'id');
+        $this->assertNotNull($id);
+        $this->assertSame('bigint', $id['type_name']);
+        $this->assertTrue($id['auto_increment']);
+
+        $roomId = collect(Schema::getColumns('reservations'))->firstWhere('name', 'room_id');
+        $this->assertNotNull($roomId);
+        $this->assertSame('bigint', $roomId['type_name']);
+        $this->assertFalse($roomId['auto_increment']);
+
+        $foreign = collect(Schema::getForeignKeys('reservations'))->first(
+            fn (array $key): bool => in_array('room_id', $key['columns'], true),
+        );
+        $this->assertNotNull($foreign);
+        $this->assertSame('rooms', $foreign['foreign_table']);
+        $this->assertSame(['id'], $foreign['foreign_columns']);
     }
 }
