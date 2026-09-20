@@ -133,7 +133,7 @@ Criei três tabelas principais: `users`, `rooms` e `reservations`.
 | `created_at`   | `timestamp`, nullable |                            |
 | `updated_at`   | `timestamp`, nullable |                            |
 
-Para `users`, optei por UUIDv7, já que o desafio não definia o tipo de ID. Escolhi por ser um identificador não sequencial para exposição externa e ainda manter ordenação temporal, pois combina timestamp com aleatoriedade. Para senha, usei Argon2id por ser um algoritmo memory-hard, aumentando o custo de ataques em massa com GPU/ASIC por exigir processamento e uso significativo de memória por tentativa.
+Para `users`, optei pelo UUIDv7 por ser um identificador não sequencial ideal para exposição externa, mantendo a ordenação temporal ao combinar timestamp e aleatoriedade. Para o armazenamento de senhas, selecionei o Argon2i por ser um algoritmo baseado em custo de memória (memory-hard). Essa abordagem mitiga ataques de canal lateral e encarece significativamente tentativas de força bruta em massa com o uso de GPUs ou ASICs.
 
 Foi escolhido o bigint unsigned nos id da chave primária pois é o padrão do laravel além de aguentar número bem maior que o int normal, tanto que em participants foi usado o int ao invés do bigint, e o unsigned é porque nenhum dos dados podem ser negativos
 
