@@ -61,9 +61,10 @@ Com o MySQL 8 no Docker saudável:
 
 ```bash
 php artisan migrate
+php artisan db:seed
 ```
 
-Os administradores padrão entram pelo migrate. `php artisan db:seed` não é um passo obrigatório.
+O `php artisan migrate` já cria os três administradores, as três salas e as três reservas de demonstração. O `php artisan db:seed` (RF19) garante os mesmos dados e não duplica salas ou reservas que já existirem.
 
 Na primeira vez no host, instale as dependências com `composer install` e `npm install` antes dos comandos Artisan e Vite.
 
@@ -72,6 +73,8 @@ Na primeira vez no host, instale as dependências com `composer install` e `npm 
 `composer run setup` é um atalho opcional. Ele instala dependências, copia `.env.example` para `.env` só se o `.env` não existir, gera a chave, roda as migrations e faz o build do frontend.
 
 Use o atalho somente depois que o MySQL 8 no Docker estiver saudável. Sem o banco aceitando conexões, o setup falha.
+
+O setup não executa o seed. Depois dele, o catálogo de demonstração já veio do migrate. O `php artisan db:seed` continua disponível e não duplica esses dados.
 
 ## Rodar a aplicação toda
 
