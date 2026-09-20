@@ -134,6 +134,8 @@ Criei três tabelas principais: `users`, `rooms` e `reservations`.
 
 Para `users`, optei por UUIDv7, já que o desafio não definia o tipo de ID. Escolhi por ser um identificador não sequencial para exposição externa e ainda manter ordenação temporal, pois combina timestamp com aleatoriedade. Para senha, usei Argon2id por ser um algoritmo memory-hard, aumentando o custo de ataques em massa com GPU/ASIC por exigir processamento e uso significativo de memória por tentativa.
 
+Foi escolhido o bigint unsigned nos id da chave primária pois é o padrão do laravel além de aguentar número bem maior que o int normal, tanto que em participants foi usado o int ao invés do bigint, e o unsigned é porque nenhum dos dados podem ser negativos
+
 Já `rooms` e `reservations` usam IDs numéricos incrementais, por serem mais simples e suficientes para o escopo do projeto. Em um sistema distribuído ou com necessidade maior de IDs externos, UUIDv7 poderia ser considerado também.
 
 Em reservations, decidi manter o responsável como texto livre. O desafio não deixa claro se o responsável pela reunião precisa necessariamente ser um usuário cadastrado no sistema. Como o painel administrativo também pode ser usado para registrar reuniões lideradas por pessoas externas ao sistema, preferi não criar um vínculo obrigatório com users.
@@ -158,8 +160,16 @@ Na alteração da capacidade de uma sala, verifico as reservas futuras e ativas.
 
 ## O que ficou de fora
 
-O ADR-001 cortou cadastro público, calendário, e-mail e papéis extras. Edição completa de reserva (data, hora, sala, participantes) continua de fora: só título e responsável mudam em reserva ativa (ADR-009). Ocupação fica travada. Redução de capacidade da sala ainda não baixa `participants` por essa tela; o caminho continua sendo cancelar e recriar. Com mais tempo, esses itens seriam os primeiros a voltar, sem reabrir o recorte do desafio.
+Edição da data, horário ou sala de uma reserva, pois exigiria adaptar novamente as regras de conflito e concorrência.
+
+Suporte a multi-tenant, onde usuários de organizações diferentes não poderiam visualizar ou administrar as mesmas salas e reservas.
+
+Recuperação de reservas canceladas durante a inativação de uma sala. Em uma evolução do sistema, ao reativar a sala seria possível verificar quais reservas foram canceladas nesse processo e permitir ao usuário escolher quais deseja restaurar, validando novamente disponibilidade e conflitos.
 
 ## Uso de IA
 
-Cursor (agents) foi usado para planejar, implementar e testar. O autor é responsável pelo código.
+Usei IA como acelerador durante o desenvolvimento.
+
+As regras de negócio e decisões arquiteturais foram definidas por mim. A IA foi utilizada principalmente para auxiliar na implementação, planejamento, testes, revisão de código e documentação, sempre seguindo as regras previamente definidas.
+
+Também utilizei um workflow próprio para controlar o uso da IA, onde consigo revisar o plano antes da implementação, definir quais testes devem ser executados, limitar alterações ao escopo da tarefa e separar trabalhos independentes em diferentes Git worktrees.
