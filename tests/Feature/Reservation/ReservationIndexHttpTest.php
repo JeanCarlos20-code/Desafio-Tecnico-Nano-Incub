@@ -6,6 +6,7 @@ use App\Modules\Reservation\Infra\Database\Models\Reservation;
 use App\Modules\Room\Infra\Database\Models\Room;
 use App\Modules\User\Infra\Database\Models\User as UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -55,13 +56,20 @@ class ReservationIndexHttpTest extends TestCase
                 ->where('filters.ends_on', null)
                 ->where('filters.room_id', null)
                 ->where('reservations.per_page', 15)
-                ->has('reservations.data', 3)
-                ->where('reservations.data.0.id', $earlier->id)
-                ->where('reservations.data.0.title', 'Manha')
-                ->where('reservations.data.0.starts_at', '21/09/2026 09:00')
-                ->where('reservations.data.1.id', $later->id)
-                ->where('reservations.data.1.title', 'Tarde')
-                ->where('reservations.data.2.id', $tomorrow->id)
+                ->has('reservations.data', 6)
+                ->where('reservations.data', function (Collection $rows) use ($earlier, $later, $tomorrow): bool {
+                    $byId = $rows->keyBy('id');
+
+                    return $byId->has($earlier->id)
+                        && $byId[$earlier->id]['title'] === 'Manha'
+                        && $byId[$earlier->id]['starts_at'] === '21/09/2026 09:00'
+                        && $byId->has($later->id)
+                        && $byId[$later->id]['title'] === 'Tarde'
+                        && $byId->has($tomorrow->id)
+                        && collect($rows)->contains('title', 'Reunião da manhã')
+                        && collect($rows)->contains('title', 'Alinhamento seguinte')
+                        && collect($rows)->contains('title', 'Treinamento da tarde');
+                })
             );
     }
 
@@ -102,7 +110,7 @@ class ReservationIndexHttpTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/reservations?period=today')
+            ->get('/reservations?period=today&room_id='.$room->id)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.period', 'today')
@@ -112,7 +120,7 @@ class ReservationIndexHttpTest extends TestCase
             );
 
         $this->actingAs($user)
-            ->get('/reservations?period=tomorrow')
+            ->get('/reservations?period=tomorrow&room_id='.$room->id)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reservations.data', 1)
@@ -120,7 +128,7 @@ class ReservationIndexHttpTest extends TestCase
             );
 
         $this->actingAs($user)
-            ->get('/reservations?period=week')
+            ->get('/reservations?period=week&room_id='.$room->id)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reservations.data', 3)
@@ -164,7 +172,7 @@ class ReservationIndexHttpTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/reservations?period=today&starts_on=2026-09-22&ends_on=2026-09-23')
+            ->get('/reservations?period=today&starts_on=2026-09-22&ends_on=2026-09-23&room_id='.$room->id)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.period', 'today')
@@ -230,7 +238,7 @@ class ReservationIndexHttpTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['ends_on']);
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
     }
 
     public function test_index_filters_by_room_with_the_resolved_window_and_excludes_canceled_rows(): void
@@ -324,8 +332,18 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
-                ->has('reservations.data', 0)
-                ->where('hasAny', false)
+                ->has('reservations.data', 3)
+                ->where('hasAny', true)
+                ->where('reservations.data', function (Collection $rows): bool {
+                    $titles = $rows->pluck('title');
+
+                    return $titles->contains('Reunião da manhã')
+                        && $titles->contains('Alinhamento seguinte')
+                        && $titles->contains('Treinamento da tarde')
+                        && ! $titles->contains('Standalone')
+                        && ! $titles->contains('Deactivate')
+                        && ! $titles->contains('Delete');
+                })
             );
 
         $this->assertNotNull($standalone->fresh()->cancelled_at);

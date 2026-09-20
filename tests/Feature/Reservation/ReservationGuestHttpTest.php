@@ -37,7 +37,7 @@ class ReservationGuestHttpTest extends TestCase
             'participants' => 2,
         ])->assertRedirect(route('login'));
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
         $this->assertDatabaseHas('reservations', ['title' => 'Existing']);
         $this->assertDatabaseMissing('reservations', ['title' => 'Attack']);
     }

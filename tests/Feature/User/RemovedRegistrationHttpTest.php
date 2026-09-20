@@ -34,6 +34,8 @@ class RemovedRegistrationHttpTest extends TestCase
         $this->assertFalse(Route::has('register.store'));
         $this->assertFalse(Route::has('users.create'));
         $this->assertFalse(Route::has('users.store'));
+        $this->assertFalse(Route::has('password.request'));
+        $this->assertFalse(Route::has('verification.notice'));
     }
 
     /**
@@ -46,6 +48,12 @@ class RemovedRegistrationHttpTest extends TestCase
             'POST /register' => ['post', '/register'],
             'GET /users/create' => ['get', '/users/create'],
             'POST /users' => ['post', '/users'],
+            'GET /forgot-password' => ['get', '/forgot-password'],
+            'POST /forgot-password' => ['post', '/forgot-password'],
+            'GET /reset-password' => ['get', '/reset-password'],
+            'POST /reset-password' => ['post', '/reset-password'],
+            'GET /email/verification-notification' => ['get', '/email/verification-notification'],
+            'POST /email/verification-notification' => ['post', '/email/verification-notification'],
         ];
     }
 }

@@ -6,6 +6,7 @@ use App\Modules\Reservation\Infra\Database\Models\Reservation;
 use App\Modules\Room\Infra\Database\Models\Room;
 use App\Modules\User\Infra\Database\Models\User as UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -33,9 +34,11 @@ class ReservationStoreHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Create')
-                ->has('rooms', 1)
+                ->has('rooms', 4)
                 ->where('rooms.0.id', $active->id)
                 ->where('rooms.0.name', 'Sala Azul')
+                ->where('rooms', fn (Collection $rooms): bool => $rooms->contains('name', 'Sala Azul')
+                    && ! $rooms->contains('name', 'Sala Cinza'))
             );
     }
 
@@ -50,9 +53,14 @@ class ReservationStoreHttpTest extends TestCase
             ->assertRedirect(route('reservations.index'))
             ->assertSessionHas('success', 'Reserva criada com sucesso.');
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
+        $this->assertDatabaseHas('reservations', [
+            'title' => 'Daily',
+            'responsible' => 'Ada Lovelace',
+            'room_id' => $room->id,
+        ]);
 
-        $reservation = Reservation::query()->first();
+        $reservation = Reservation::query()->where('title', 'Daily')->first();
         $this->assertNotNull($reservation);
         $this->assertTrue(Str::isUuid($reservation->id));
         $this->assertSame('7', $reservation->id[14]);
@@ -99,7 +107,8 @@ class ReservationStoreHttpTest extends TestCase
                 'ends_at' => 'Informe o término.',
             ]);
 
-        $this->assertDatabaseCount('reservations', 0);
+        $this->assertDatabaseCount('reservations', 3);
+        $this->assertDatabaseMissing('reservations', ['title' => 'Daily']);
     }
 
     public function test_store_rejects_inactive_room_over_capacity_past_start_bad_duration_and_active_overlap(): void
@@ -154,7 +163,8 @@ class ReservationStoreHttpTest extends TestCase
             ->assertRedirect(route('reservations.create'))
             ->assertSessionHasErrors(['starts_at' => 'Já existe uma reserva ativa neste horário para a sala.']);
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
+        $this->assertDatabaseMissing('reservations', ['title' => 'Daily']);
     }
 
     public function test_store_accepts_a_consecutive_slot_and_a_slot_that_only_overlaps_a_canceled_row(): void
@@ -190,7 +200,7 @@ class ReservationStoreHttpTest extends TestCase
             ]))
             ->assertRedirect(route('reservations.index'));
 
-        $this->assertDatabaseCount('reservations', 4);
+        $this->assertDatabaseCount('reservations', 7);
         $this->assertDatabaseHas('reservations', ['title' => 'Consecutiva']);
         $this->assertDatabaseHas('reservations', ['title' => 'Sobre cancelada']);
     }

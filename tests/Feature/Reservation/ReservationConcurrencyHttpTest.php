@@ -89,7 +89,8 @@ class ReservationConcurrencyHttpTest extends TestCase
             $first->isSuccessful() && $second->isSuccessful(),
             $first->getErrorOutput()."\n".$second->getErrorOutput(),
         );
-        $this->assertSame(1, Reservation::query()->whereNull('cancelled_at')->count());
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertSame(1, Reservation::query()->where('room_id', $room->id)->whereNull('cancelled_at')->count());
+        $this->assertSame(4, Reservation::query()->whereNull('cancelled_at')->count());
+        $this->assertDatabaseCount('reservations', 4);
     }
 }

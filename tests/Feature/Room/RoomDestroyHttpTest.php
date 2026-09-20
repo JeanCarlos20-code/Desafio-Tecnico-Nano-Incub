@@ -6,6 +6,7 @@ use App\Modules\Reservation\Infra\Database\Models\Reservation;
 use App\Modules\Room\Infra\Database\Models\Room;
 use App\Modules\User\Infra\Database\Models\User as UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -45,8 +46,12 @@ class RoomDestroyHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Room/Index')
-                ->has('rooms.data', 1)
-                ->where('rooms.data.0.id', $kept->id)
+                ->has('rooms.data', 4)
+                ->where('rooms.data', function (Collection $rows) use ($room, $kept): bool {
+                    $ids = $rows->pluck('id');
+
+                    return $ids->contains($kept->id) && ! $ids->contains($room->id);
+                })
             );
     }
 
