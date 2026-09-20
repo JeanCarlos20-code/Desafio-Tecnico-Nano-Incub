@@ -76,9 +76,25 @@ final class EloquentReservationRepository implements ReservationRepository
 
     public function findById(string $id): ?Reservation
     {
-        $model = ReservationModel::query()->find($id);
+        $model = ReservationModel::query()->with('room')->find($id);
 
         return $model ? $this->toDomain($model) : null;
+    }
+
+    public function updateTitleAndResponsible(string $id, string $title, string $responsible): Reservation
+    {
+        ReservationModel::query()->whereKey($id)->update([
+            'title' => $title,
+            'responsible' => $responsible,
+        ]);
+
+        $model = ReservationModel::query()->with('room')->find($id);
+
+        if ($model === null) {
+            throw new \RuntimeException('Reservation not found after metadata update.');
+        }
+
+        return $this->toDomain($model);
     }
 
     public function markCanceled(string $id, DateTimeImmutable $cancelledAt): void

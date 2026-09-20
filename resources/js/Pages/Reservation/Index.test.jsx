@@ -126,6 +126,29 @@ describe('Reservation/Index', () => {
         );
     });
 
+    it('shows an Editar link to /reservations/{id}/edit beside Cancelar on an active row', () => {
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                data: [
+                    sampleReservations.data[0],
+                    {
+                        ...sampleReservations.data[1],
+                        status: 'inactive',
+                        status_label: 'Inativa',
+                    },
+                ],
+            },
+        });
+
+        const editLinks = screen.getAllByRole('link', { name: 'Editar' });
+
+        expect(editLinks.length).toBeGreaterThan(0);
+        expect(editLinks.every((link) => link.getAttribute('href') === '/reservations/1/edit')).toBe(true);
+        expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
     it('writes the selected period, omits range dates, and resets page to 1', async () => {
         const user = userEvent.setup();
 

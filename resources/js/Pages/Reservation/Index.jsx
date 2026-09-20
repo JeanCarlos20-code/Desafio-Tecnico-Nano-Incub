@@ -518,13 +518,21 @@ function RowActions({ reservation, onCancel }) {
     }
 
     return (
-        <button
-            type="button"
-            onClick={(event) => onCancel(reservation, event)}
-            className="rounded-md bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-            Cancelar
-        </button>
+        <div className="inline-flex items-center justify-center gap-2">
+            <Link
+                href={`/reservations/${reservation.id}/edit`}
+                className="rounded-md bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                Editar
+            </Link>
+            <button
+                type="button"
+                onClick={(event) => onCancel(reservation, event)}
+                className="rounded-md bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+                Cancelar
+            </button>
+        </div>
     );
 }
 

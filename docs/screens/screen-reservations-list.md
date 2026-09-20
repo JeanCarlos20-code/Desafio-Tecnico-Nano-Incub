@@ -2,7 +2,7 @@
 
 ## Overview
 
-This screen allows an authenticated administrator to view, filter, create, and cancel meeting room reservations in the **ReservaSalas** system.
+This screen allows an authenticated administrator to view, filter, create, edit metadata, and cancel meeting room reservations in the **ReservaSalas** system.
 
 ## Visual reference
 
@@ -18,11 +18,12 @@ Reference file:
 
 > The image guides the appearance of the screen, but its exact dimensions do not need to be reproduced. The layout must adapt responsively to the available space while preserving the behaviors, required data, business rules, and accessibility requirements defined in this document.
 
-> The reference image includes a calendar icon in each active reservation row. The implementation must omit this icon because the challenge does not require a reservation details or edit action. The `Ações` column contains only the cancellation action when it is available.
+> The reference image includes a calendar icon in each active reservation row. The implementation must omit this icon. The `Ações` column shows `Editar` (to `/reservations/{id}/edit`) beside `Cancelar` on active rows. Edit changes only title and responsible; occupancy stays locked.
 
 - **Page route:** `GET /reservations`
 - **Access:** authenticated administrators only
 - **Create route:** `GET /reservations/create`
+- **Edit route:** `GET /reservations/{reservation}/edit`
 - **Cancel route:** `PATCH /reservations/{reservation}/cancel`
 - **Expected technologies:** React, Inertia.js 2, Tailwind CSS, and Laravel
 
@@ -34,6 +35,7 @@ Provide a central administrative view where the user can:
 - filter reservations by room;
 - filter reservations by day;
 - open the new reservation form;
+- open the partial edit form (`Editar`) for title and responsible only;
 - cancel an active reservation after confirmation;
 - verify that a canceled reservation disappears from the list and no longer blocks its time interval.
 
@@ -160,7 +162,7 @@ The table displays one row per reservation.
 | `Fim` | End datetime | `HH:mm` when a day is selected |
 | `Participantes` | Participant count | Positive integer |
 | `Situação` | Reservation state | Text badge |
-| `Ações` | Available operations | Cancel action for eligible active reservations |
+| `Ações` | Available operations | `Editar` and `Cancelar` for eligible active reservations |
 
 If the interface later allows the day filter to be cleared, `Início` and `Fim` must include the date as `DD/MM/YYYY HH:mm` to avoid ambiguity.
 
@@ -190,6 +192,16 @@ If an active reservation has already ended, it may continue to use `Ativa` if th
 
 ## Row actions
 
+### Edit reservation
+
+Active reservations display the link:
+
+```text
+Editar
+```
+
+It navigates to `/reservations/{id}/edit`. That screen changes only `title` and `responsible`. Date, time, room, and participants stay locked. This action does not lower `participants` to satisfy a room capacity reduction.
+
 ### Cancel reservation
 
 Active reservations that are eligible for cancellation display the button:
@@ -198,7 +210,7 @@ Active reservations that are eligible for cancellation display the button:
 Cancelar
 ```
 
-There is no canceled row in this list, so there is no unavailable dash state to render.
+`Editar` sits beside `Cancelar`. There is no canceled row in this list, so there is no unavailable dash state to render.
 
 The cancellation action sets `cancelled_at`; it must not hard-delete the reservation record. The row then disappears from the list.
 
@@ -404,7 +416,7 @@ Requirements:
 - [ ] `Nova reserva` navigates to `/reservations/create`.
 - [ ] The list displays only reservations with `cancelled_at` null.
 - [ ] The `Ações` column does not display a calendar or reservation-details icon.
-- [ ] Eligible active reservations display only the `Cancelar` action.
+- [ ] Eligible active reservations display `Editar` (to `/reservations/{id}/edit`) beside `Cancelar`.
 - [ ] Canceling a reservation always requires explicit confirmation.
 - [ ] The cancellation dialog identifies the reservation being affected.
 - [ ] Canceling sets `cancelled_at` instead of hard-deleting the reservation record.

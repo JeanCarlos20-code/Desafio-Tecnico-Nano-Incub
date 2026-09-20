@@ -2,8 +2,10 @@
 
 use App\Modules\Reservation\Infra\Http\Controllers\CancelReservationController;
 use App\Modules\Reservation\Infra\Http\Controllers\CreateReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\EditReservationController;
 use App\Modules\Reservation\Infra\Http\Controllers\IndexReservationController;
 use App\Modules\Reservation\Infra\Http\Controllers\StoreReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\UpdateReservationController;
 use App\Modules\Room\Infra\Http\Controllers\CreateRoomController;
 use App\Modules\Room\Infra\Http\Controllers\DestroyRoomController;
 use App\Modules\Room\Infra\Http\Controllers\EditRoomController;
@@ -25,6 +27,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reservations', IndexReservationController::class)->name('reservations.index');
     Route::get('/reservations/create', CreateReservationController::class)->name('reservations.create');
     Route::post('/reservations', StoreReservationController::class)->name('reservations.store');
+    Route::get('/reservations/{reservation}/edit', EditReservationController::class)->name('reservations.edit');
+    Route::put('/reservations/{reservation}', UpdateReservationController::class)->name('reservations.update');
     Route::patch('/reservations/{reservation}/cancel', CancelReservationController::class)->name('reservations.cancel');
 
     Route::get('/rooms', IndexRoomController::class)->name('rooms.index');
