@@ -11,6 +11,7 @@ vi.mock('@inertiajs/react', () => ({
     usePage: vi.fn(),
     router: {
         get: vi.fn(),
+        on: vi.fn(() => vi.fn()),
     },
     Link: ({ href, children, className, ...props }) => createElement('a', { href, className, ...props }, children),
 }));
@@ -94,6 +95,8 @@ beforeEach(() => {
     useForm.mockReset();
     usePage.mockReset();
     router.get.mockReset();
+    router.on.mockReset();
+    router.on.mockImplementation(() => vi.fn());
     useForm.mockReturnValue(createForm());
     mockPage();
 });
@@ -497,8 +500,19 @@ describe('Reservation/Index', () => {
 
         const retryOptions = router.get.mock.calls.at(-1)[2];
         retryOptions.onError();
-        expect(retryOptions.onHttpException()).toBe(false);
-        expect(retryOptions.onNetworkError()).toBe(false);
+
+        const invalidListener = router.on.mock.calls.find(([event]) => event === 'invalid')[1];
+        const exceptionListener = router.on.mock.calls.find(([event]) => event === 'exception')[1];
+        const invalidEvent = { preventDefault: vi.fn() };
+        const exceptionEvent = { preventDefault: vi.fn() };
+
+        invalidListener(invalidEvent);
+        exceptionListener(exceptionEvent);
+
+        expect(invalidEvent.preventDefault).toHaveBeenCalledTimes(1);
+        expect(exceptionEvent.preventDefault).toHaveBeenCalledTimes(1);
+        expect(retryOptions.onHttpException).toBeUndefined();
+        expect(retryOptions.onNetworkError).toBeUndefined();
         expect(screen.getByText('Não foi possível carregar as reservas.')).toBeInTheDocument();
     });
 
@@ -507,13 +521,19 @@ describe('Reservation/Index', () => {
         const form = createForm();
         useForm.mockReturnValue(form);
 
-        let httpExceptionResult;
-        let networkErrorResult;
+        let invalidPrevented = false;
+        let exceptionPrevented = false;
 
         form.patch.mockImplementation((_url, options) => {
             options.onError();
-            httpExceptionResult = options.onHttpException();
-            networkErrorResult = options.onNetworkError();
+            const invalidListener = router.on.mock.calls.find(([event]) => event === 'invalid')[1];
+            const exceptionListener = router.on.mock.calls.find(([event]) => event === 'exception')[1];
+            const invalidEvent = { preventDefault: vi.fn() };
+            const exceptionEvent = { preventDefault: vi.fn() };
+            invalidListener(invalidEvent);
+            exceptionListener(exceptionEvent);
+            invalidPrevented = invalidEvent.preventDefault.mock.calls.length > 0;
+            exceptionPrevented = exceptionEvent.preventDefault.mock.calls.length > 0;
         });
 
         renderIndex();
@@ -521,8 +541,8 @@ describe('Reservation/Index', () => {
         await user.click(screen.getAllByRole('button', { name: 'Cancelar' })[0]);
         await user.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
 
-        expect(httpExceptionResult).toBe(false);
-        expect(networkErrorResult).toBe(false);
+        expect(invalidPrevented).toBe(true);
+        expect(exceptionPrevented).toBe(true);
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByText('Não foi possível cancelar a reserva. Tente novamente.')).toHaveAttribute(
             'role',

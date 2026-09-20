@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { router } from '@inertiajs/react';
 import { login, logout } from './session';
+
+vi.mock('@inertiajs/react', () => ({
+    router: {
+        on: vi.fn(() => vi.fn()),
+    },
+}));
 
 function createForm(overrides = {}) {
     return {
@@ -8,6 +15,20 @@ function createForm(overrides = {}) {
         ...overrides,
     };
 }
+
+function fireVisitEvent(name) {
+    const listener = router.on.mock.calls.find(([event]) => event === name)?.[1];
+    const event = { preventDefault: vi.fn() };
+
+    listener?.(event);
+
+    return event;
+}
+
+beforeEach(() => {
+    router.on.mockReset();
+    router.on.mockImplementation(() => vi.fn());
+});
 
 describe('session service', () => {
     it('posts the Inertia form to /login', () => {
@@ -41,14 +62,17 @@ describe('session service', () => {
         expect(onError).toHaveBeenCalledWith({ credentials: 'E-mail ou senha inválidos.' });
     });
 
-    it('returns false from onHttpException so a non-validation failure stays on the page', () => {
+    it('treats omitted invalid/exception returns as false so a non-validation failure stays on the page', () => {
         const form = createForm();
 
         login(form);
 
-        const options = form.post.mock.calls[0][1];
+        const invalidEvent = fireVisitEvent('invalid');
+        const exceptionEvent = fireVisitEvent('exception');
 
-        expect(options.onHttpException()).toBe(false);
-        expect(options.onNetworkError()).toBe(false);
+        expect(invalidEvent.preventDefault).toHaveBeenCalledTimes(1);
+        expect(exceptionEvent.preventDefault).toHaveBeenCalledTimes(1);
+        expect(form.post.mock.calls[0][1].onHttpException).toBeUndefined();
+        expect(form.post.mock.calls[0][1].onNetworkError).toBeUndefined();
     });
 });

@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useForm, usePage } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import Create from './Create';
@@ -9,6 +9,9 @@ import Create from './Create';
 vi.mock('@inertiajs/react', () => ({
     useForm: vi.fn(),
     usePage: vi.fn(),
+    router: {
+        on: vi.fn(() => vi.fn()),
+    },
     Link: ({ href, children, className, ...props }) => createElement('a', { href, className, ...props }, children),
 }));
 
@@ -75,6 +78,8 @@ beforeEach(() => {
     vi.setSystemTime(new Date('2026-09-21T08:00:00.000Z'));
     useForm.mockReset();
     usePage.mockReset();
+    router.on.mockReset();
+    router.on.mockImplementation(() => vi.fn());
     mockPage();
 });
 
@@ -183,8 +188,9 @@ describe('Reservation/Create', () => {
         const user = userEvent.setup();
         const { form } = renderCreate();
 
-        form.post.mockImplementation((_url, options) => {
-            options.onHttpException();
+        form.post.mockImplementation(() => {
+            const listener = router.on.mock.calls.find(([event]) => event === 'invalid')[1];
+            listener({ preventDefault: vi.fn() });
         });
 
         await user.click(screen.getByRole('button', { name: 'Criar reserva' }));

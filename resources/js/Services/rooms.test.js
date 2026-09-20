@@ -5,6 +5,7 @@ import { destroy, store, update, visitIndex } from './rooms';
 vi.mock('@inertiajs/react', () => ({
     router: {
         get: vi.fn(),
+        on: vi.fn(() => vi.fn()),
     },
 }));
 
