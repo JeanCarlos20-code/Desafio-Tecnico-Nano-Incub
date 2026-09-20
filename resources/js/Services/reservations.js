@@ -4,6 +4,10 @@ export function store(form, options = {}) {
     form.post('/reservations', options);
 }
 
+export function update(form, id, options = {}) {
+    form.put(`/reservations/${id}`, options);
+}
+
 export function cancel(form, reservationId, options = {}) {
     form.patch(`/reservations/${reservationId}/cancel`, options);
 }
