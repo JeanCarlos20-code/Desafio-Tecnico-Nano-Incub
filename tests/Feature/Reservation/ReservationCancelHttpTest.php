@@ -76,7 +76,11 @@ class ReservationCancelHttpTest extends TestCase
         $user = UserModel::factory()->create();
 
         $this->actingAs($user)
-            ->patch('/reservations/018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c99/cancel')
+            ->patch('/reservations/999999/cancel')
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->patch('/reservations/not-a-uuid/cancel')
             ->assertNotFound();
 
         $this->assertDatabaseCount('reservations', 3);

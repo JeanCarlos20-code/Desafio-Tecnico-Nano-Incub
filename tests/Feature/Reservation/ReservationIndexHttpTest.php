@@ -115,7 +115,7 @@ class ReservationIndexHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.period', 'today')
                 ->has('reservations.data', 1)
-                ->where('reservations.data.0.id', $sep21->id)
+                ->where('reservations.data.0.id', (string) $sep21->id)
                 ->where('reservations.data.0.starts_at', '09:00')
             );
 
@@ -124,7 +124,7 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reservations.data', 1)
-                ->where('reservations.data.0.id', $sep22->id)
+                ->where('reservations.data.0.id', (string) $sep22->id)
             );
 
         $this->actingAs($user)
@@ -132,9 +132,9 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reservations.data', 3)
-                ->where('reservations.data.0.id', $sep21->id)
-                ->where('reservations.data.1.id', $sep22->id)
-                ->where('reservations.data.2.id', $sep27->id)
+                ->where('reservations.data.0.id', (string) $sep21->id)
+                ->where('reservations.data.1.id', (string) $sep22->id)
+                ->where('reservations.data.2.id', (string) $sep27->id)
             );
 
         $this->assertDatabaseHas('reservations', ['id' => $sep20->id]);
@@ -179,8 +179,8 @@ class ReservationIndexHttpTest extends TestCase
                 ->where('filters.starts_on', '2026-09-22')
                 ->where('filters.ends_on', '2026-09-23')
                 ->has('reservations.data', 2)
-                ->where('reservations.data.0.id', $sep22->id)
-                ->where('reservations.data.1.id', $sep23->id)
+                ->where('reservations.data.0.id', (string) $sep22->id)
+                ->where('reservations.data.1.id', (string) $sep23->id)
             );
     }
 
@@ -204,7 +204,7 @@ class ReservationIndexHttpTest extends TestCase
                 ->where('filters.period', 'today')
                 ->where('filters.starts_on', '2026-09-21')
                 ->where('filters.ends_on', '2026-09-21')
-                ->where('filters.room_id', $room->id)
+                ->where('filters.room_id', (string) $room->id)
                 ->where('reservations.per_page', 15)
                 ->where('reservations.current_page', 2)
                 ->has('reservations.data', 1)
@@ -278,10 +278,10 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
-                ->where('filters.room_id', $roomA->id)
+                ->where('filters.room_id', (string) $roomA->id)
                 ->where('filters.period', 'today')
                 ->has('reservations.data', 1)
-                ->where('reservations.data.0.id', $active->id)
+                ->where('reservations.data.0.id', (string) $active->id)
                 ->where('reservations.data.0.status', 'active')
                 ->where('reservations.data.0.status_label', 'Ativa')
             );

@@ -14,7 +14,7 @@ class ReservationSchemaTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_factory_persists_reservation_matching_adr_005_columns_as_uuid_v7(): void
+    public function test_factory_persists_reservation_matching_adr_005_columns_as_incrementing_integer(): void
     {
         $room = Room::factory()->create([
             'name' => 'Sala Azul',
@@ -33,8 +33,10 @@ class ReservationSchemaTest extends TestCase
 
         $reservation->refresh();
 
-        $this->assertTrue(Str::isUuid($reservation->id));
-        $this->assertSame('7', $reservation->id[14]);
+        $this->assertFalse(Str::isUuid((string) $reservation->id));
+        $this->assertNotFalse(filter_var($reservation->id, FILTER_VALIDATE_INT));
+        $this->assertGreaterThan(0, (int) $reservation->id);
+        $this->assertNotFalse(filter_var($reservation->room_id, FILTER_VALIDATE_INT));
         $this->assertSame($room->id, $reservation->room_id);
         $this->assertSame('Ada Lovelace', $reservation->responsible);
         $this->assertSame('Daily', $reservation->title);
@@ -78,7 +80,7 @@ class ReservationSchemaTest extends TestCase
         $this->expectException(QueryException::class);
 
         Reservation::factory()->create([
-            'room_id' => '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c99',
+            'room_id' => 999999,
         ]);
     }
 }

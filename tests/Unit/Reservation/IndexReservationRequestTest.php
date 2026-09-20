@@ -16,13 +16,13 @@ class IndexReservationRequestTest extends TestCase
         }
 
         $validated = $this->validated([
-            'room_id' => '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11',
+            'room_id' => 1,
             'period' => 'today',
             'starts_on' => '2026-09-22',
             'ends_on' => '2026-09-23',
         ]);
 
-        $this->assertSame('018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11', $validated['room_id']);
+        $this->assertSame(1, $validated['room_id']);
         $this->assertSame('today', $validated['period']);
         $this->assertSame('2026-09-22', $validated['starts_on']);
         $this->assertSame('2026-09-23', $validated['ends_on']);
