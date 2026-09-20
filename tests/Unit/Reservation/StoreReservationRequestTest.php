@@ -22,6 +22,9 @@ class StoreReservationRequestTest extends TestCase
         $this->assertSame(['Selecione uma sala válida.'], $this->validationErrors($this->validPayload([
             'room_id' => 'not-a-uuid',
         ]))['room_id']);
+        $this->assertSame(['Selecione uma sala válida.'], $this->validationErrors($this->validPayload([
+            'room_id' => '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11',
+        ]))['room_id']);
         $this->assertSame(['Informe um início válido.'], $this->validationErrors($this->validPayload([
             'starts_at' => 'amanha',
         ]))['starts_at']);
@@ -40,6 +43,13 @@ class StoreReservationRequestTest extends TestCase
         ]))['participants']);
     }
 
+    public function test_it_accepts_an_integer_room_id_in_the_isolated_input_contract(): void
+    {
+        $validated = $this->validated($this->validPayload(['room_id' => 1]));
+
+        $this->assertSame(1, $validated['room_id']);
+    }
+
     public function test_it_trims_responsible_and_title_and_excludes_unknown_keys(): void
     {
         $validated = $this->validated($this->validPayload([
@@ -50,6 +60,7 @@ class StoreReservationRequestTest extends TestCase
 
         $this->assertSame('Ada Lovelace', $validated['responsible']);
         $this->assertSame('Daily', $validated['title']);
+        $this->assertSame(1, $validated['room_id']);
         $this->assertSame(
             ['room_id', 'responsible', 'title', 'starts_at', 'ends_at', 'participants'],
             array_keys($validated),
@@ -63,7 +74,7 @@ class StoreReservationRequestTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'room_id' => '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11',
+            'room_id' => 1,
             'responsible' => 'Ada Lovelace',
             'title' => 'Daily',
             'starts_at' => '2026-09-21 10:00:00',

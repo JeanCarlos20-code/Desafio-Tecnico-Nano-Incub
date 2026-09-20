@@ -23,8 +23,9 @@ class RoomSchemaTest extends TestCase
 
         $room->refresh();
 
-        $this->assertTrue(Str::isUuid($room->id));
-        $this->assertSame('7', $room->id[14]);
+        $this->assertFalse(Str::isUuid((string) $room->id));
+        $this->assertNotFalse(filter_var($room->id, FILTER_VALIDATE_INT));
+        $this->assertGreaterThan(0, (int) $room->id);
         $this->assertSame('Sala Azul', $room->name);
         $this->assertSame(12, $room->capacity);
         $this->assertTrue($room->is_active);
@@ -62,15 +63,13 @@ class RoomSchemaTest extends TestCase
         $this->assertNotNull($column);
         $this->assertTrue(in_array($column['default'], [true, 1, '1'], true), 'Expected is_active default true');
 
-        $id = (string) Str::uuid();
         DB::table('rooms')->insert([
-            'id' => $id,
             'name' => 'Sala Default',
             'capacity' => 4,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $this->assertTrue((bool) DB::table('rooms')->where('id', $id)->value('is_active'));
+        $this->assertTrue((bool) DB::table('rooms')->where('name', 'Sala Default')->value('is_active'));
     }
 }

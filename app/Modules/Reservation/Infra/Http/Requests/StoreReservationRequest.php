@@ -17,7 +17,7 @@ class StoreReservationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'room_id' => ['required', 'uuid'],
+            'room_id' => ['required', 'integer'],
             'responsible' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'starts_at' => ['required', 'date'],
@@ -33,7 +33,7 @@ class StoreReservationRequest extends FormRequest
     {
         return [
             'room_id.required' => 'Informe a sala.',
-            'room_id.uuid' => 'Selecione uma sala válida.',
+            'room_id.integer' => 'Selecione uma sala válida.',
             'responsible.required' => 'Informe o responsável.',
             'title.required' => 'Informe o título da reserva.',
             'starts_at.required' => 'Informe o início.',

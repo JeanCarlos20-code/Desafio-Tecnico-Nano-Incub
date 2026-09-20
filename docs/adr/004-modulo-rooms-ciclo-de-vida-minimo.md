@@ -1,7 +1,7 @@
 # ADR-004: Módulo Rooms com contrato mínimo, UUID v7 e ciclo de vida da sala
 
 - **Data**: 2026-09-18
-- **Status**: Aceito
+- **Status**: Aceito; o recorte de identidade UUID / `HasUuids` / `foreignUuid` foi substituído pelo [ADR-008](008-identidade-autoincremento-rooms-e-reservations.md)
 - **Decisores**: Time do Painel Administrativo
 - **Tags**: architecture, rooms, identity, scope, laravel
 
@@ -80,6 +80,7 @@ Não entram neste módulo calendário, sobreposição, duração, participantes 
 
 ## Links
 
+- Substituído por: [ADR-008](008-identidade-autoincremento-rooms-e-reservations.md) (somente o recorte de identidade UUID / `HasUuids` / `foreignUuid`)
 - [ADR-001: Delimitar o escopo aos requisitos RF01–RF19 e RNF01–RNF14](001-delimitar-escopo-aos-requisitos-rf-e-rnf.md)
 - [ADR-002: Usuário mínimo com UUID v7, soft delete e hash Argon nativo do Laravel](002-usuario-minimo-uuidv7-argon2-auth-laravel.md)
 - [Contexto do projeto](../context.md)

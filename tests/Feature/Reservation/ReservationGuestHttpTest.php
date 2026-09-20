@@ -47,7 +47,7 @@ class ReservationGuestHttpTest extends TestCase
      */
     public static function guestReservationRoutes(): array
     {
-        $id = '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11';
+        $id = '1';
 
         return [
             'GET /reservations' => ['get', '/reservations'],

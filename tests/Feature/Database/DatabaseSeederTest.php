@@ -4,7 +4,10 @@ namespace Tests\Feature\Database;
 
 use App\Modules\Reservation\Infra\Database\Models\Reservation;
 use App\Modules\Room\Infra\Database\Models\Room;
+use App\Modules\User\Infra\Database\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class DatabaseSeederTest extends TestCase
@@ -55,6 +58,47 @@ class DatabaseSeederTest extends TestCase
         $this->assertDatabaseHas('users', ['name' => 'Gertrudes', 'email' => 'teste@mail.com']);
         $this->assertDatabaseHas('users', ['name' => 'Marcelo', 'email' => 'teste2@mail.com']);
         $this->assertDatabaseHas('users', ['name' => 'Emerson', 'email' => 'teste3@mail.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+    }
+
+    public function test_database_seeder_creates_the_three_known_administrators_when_those_emails_are_missing(): void
+    {
+        User::query()->whereIn('email', [
+            'teste@mail.com',
+            'teste2@mail.com',
+            'teste3@mail.com',
+        ])->forceDelete();
+
+        $this->assertDatabaseCount('users', 0);
+
+        $this->seed();
+
+        $this->assertDatabaseCount('users', 3);
+        $this->assertDatabaseHas('users', ['name' => 'Gertrudes', 'email' => 'teste@mail.com']);
+        $this->assertDatabaseHas('users', ['name' => 'Marcelo', 'email' => 'teste2@mail.com']);
+        $this->assertDatabaseHas('users', ['name' => 'Emerson', 'email' => 'teste3@mail.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+        $this->assertDatabaseCount('rooms', 3);
+        $this->assertDatabaseCount('reservations', 3);
+
+        foreach (['teste@mail.com', 'teste2@mail.com', 'teste3@mail.com'] as $email) {
+            $hash = DB::table('users')->where('email', $email)->value('password');
+
+            $this->assertIsString($hash);
+            $this->assertNotSame('Senha123', $hash);
+            $this->assertTrue(Hash::check('Senha123', $hash));
+            $this->assertSame('argon2i', password_get_info($hash)['algoName']);
+        }
+    }
+
+    public function test_database_seeder_does_not_update_passwords_when_the_three_emails_already_exist(): void
+    {
+        $original = DB::table('users')->where('email', 'teste@mail.com')->value('password');
+
+        $this->seed();
+
+        $this->assertSame($original, DB::table('users')->where('email', 'teste@mail.com')->value('password'));
+        $this->assertDatabaseCount('users', 3);
         $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
     }
 

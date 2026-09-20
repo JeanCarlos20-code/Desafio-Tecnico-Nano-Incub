@@ -18,7 +18,7 @@ vi.mock('@inertiajs/react', () => ({
 const sampleRooms = {
     data: [
         {
-            id: 'id-1',
+            id: '1',
             name: 'Sala Azul',
             capacity: 10,
             is_active: true,
@@ -27,7 +27,7 @@ const sampleRooms = {
             has_reservations: true,
         },
         {
-            id: 'id-2',
+            id: '2',
             name: 'Sala Cinza',
             capacity: 4,
             is_active: false,
@@ -78,15 +78,15 @@ beforeEach(() => {
 });
 
 describe('Room/Index', () => {
-    it('shows name, capacity, Ativa/Inativa text, DD/MM/YYYY date, edit and delete actions, and does not display the room id', () => {
+    it('shows name, capacity, Ativa/Inativa text, DD/MM/YYYY date, edit and delete actions, and displays the persisted room id', () => {
         render(<Index rooms={sampleRooms} />);
 
-        expect(screen.queryByRole('columnheader', { name: 'ID' })).not.toBeInTheDocument();
-        expect(screen.queryByText('id-1')).not.toBeInTheDocument();
-        expect(screen.queryByText('id-2')).not.toBeInTheDocument();
+        expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument();
+        expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('2').length).toBeGreaterThan(0);
         expect(screen.getByRole('columnheader', { name: 'Nome' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Capacidade' })).toBeInTheDocument();
-        expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+        expect(screen.getByRole('columnheader', { name: 'Situação' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Criada em' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
         expect(screen.getAllByText('Sala Azul').length).toBeGreaterThan(0);
@@ -96,7 +96,7 @@ describe('Room/Index', () => {
         expect(screen.getAllByText('18/09/2026').length).toBeGreaterThan(0);
         expect(screen.getAllByRole('link', { name: 'Editar Sala Azul' })[0]).toHaveAttribute(
             'href',
-            '/rooms/id-1/edit',
+            '/rooms/1/edit',
         );
         expect(screen.getAllByRole('button', { name: 'Excluir Sala Azul' }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole('link', { name: 'Nova sala' })[0]).toHaveAttribute('href', '/rooms/create');
@@ -106,7 +106,7 @@ describe('Room/Index', () => {
         const { container } = render(<Index rooms={sampleRooms} />);
 
         const capacityHeader = screen.getByRole('columnheader', { name: 'Capacidade' });
-        const capacityCell = firstDesktopRowCells(container)[1];
+        const capacityCell = firstDesktopRowCells(container)[2];
 
         expect(capacityHeader.className).toMatch(/\btext-center\b/);
         expect(capacityCell.className).toMatch(/\btext-center\b/);
@@ -121,7 +121,7 @@ describe('Room/Index', () => {
         const { container } = render(<Index rooms={sampleRooms} />);
 
         const nameHeader = screen.getByRole('columnheader', { name: 'Nome' });
-        const nameCell = firstDesktopRowCells(container)[0];
+        const nameCell = firstDesktopRowCells(container)[1];
 
         expect(nameHeader.className).toMatch(/min-w-0/);
         expect(nameCell.className).toMatch(/min-w-0/);
@@ -133,16 +133,16 @@ describe('Room/Index', () => {
         expect(nameCell.className).not.toMatch(/max-w-/);
     });
 
-    it('Capacidade, Status, Criada em, and Ações stay compact with w-0 and use xl:w-[16%] nowrap', () => {
+    it('Capacidade, Situação, Criada em, and Ações stay compact with w-0 and use xl:w-[16%] nowrap', () => {
         const { container } = render(<Index rooms={sampleRooms} />);
 
         const headers = [
             screen.getByRole('columnheader', { name: 'Capacidade' }),
-            screen.getByRole('columnheader', { name: 'Status' }),
+            screen.getByRole('columnheader', { name: 'Situação' }),
             screen.getByRole('columnheader', { name: 'Criada em' }),
             screen.getByRole('columnheader', { name: 'Ações' }),
         ];
-        const cells = [...firstDesktopRowCells(container)].slice(1);
+        const cells = [...firstDesktopRowCells(container)].slice(2);
 
         headers.forEach((header) => {
             expect(header.className).toMatch(/\bw-0\b/);
@@ -159,7 +159,7 @@ describe('Room/Index', () => {
         const { container } = render(<Index rooms={sampleRooms} />);
 
         const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' });
-        const actionsCell = firstDesktopRowCells(container)[4];
+        const actionsCell = firstDesktopRowCells(container)[5];
 
         expect(actionsHeader.className).toMatch(/\btext-center\b/);
         expect(actionsCell.className).toMatch(/\btext-center\b/);
@@ -267,7 +267,7 @@ describe('Room/Index', () => {
         await user.click(screen.getByRole('button', { name: 'Excluir sala' }));
 
         expect(form.delete).toHaveBeenCalledTimes(1);
-        expect(form.delete).toHaveBeenCalledWith('/rooms/id-1', expect.any(Object));
+        expect(form.delete).toHaveBeenCalledWith('/rooms/1', expect.any(Object));
 
         form.processing = true;
         useForm.mockReturnValue(form);

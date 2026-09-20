@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -14,13 +13,8 @@ return new class extends Migration
         $now = now();
         $day = $now->copy()->addDay()->startOfDay();
 
-        $norteId = (string) Str::uuid7();
-        $treinamentoId = (string) Str::uuid7();
-        $diretoriaId = (string) Str::uuid7();
-
         DB::table('rooms')->insert([
             [
-                'id' => $norteId,
                 'name' => 'Sala Reunião Norte',
                 'capacity' => 8,
                 'is_active' => true,
@@ -29,7 +23,6 @@ return new class extends Migration
                 'deleted_at' => null,
             ],
             [
-                'id' => $treinamentoId,
                 'name' => 'Sala Treinamento',
                 'capacity' => 20,
                 'is_active' => true,
@@ -38,7 +31,6 @@ return new class extends Migration
                 'deleted_at' => null,
             ],
             [
-                'id' => $diretoriaId,
                 'name' => 'Sala Diretoria',
                 'capacity' => 4,
                 'is_active' => true,
@@ -48,9 +40,11 @@ return new class extends Migration
             ],
         ]);
 
+        $norteId = DB::table('rooms')->where('name', 'Sala Reunião Norte')->value('id');
+        $treinamentoId = DB::table('rooms')->where('name', 'Sala Treinamento')->value('id');
+
         DB::table('reservations')->insert([
             [
-                'id' => (string) Str::uuid7(),
                 'room_id' => $norteId,
                 'responsible' => 'Gertrudes',
                 'title' => 'Reunião da manhã',
@@ -62,7 +56,6 @@ return new class extends Migration
                 'updated_at' => $now,
             ],
             [
-                'id' => (string) Str::uuid7(),
                 'room_id' => $norteId,
                 'responsible' => 'Marcelo',
                 'title' => 'Alinhamento seguinte',
@@ -74,7 +67,6 @@ return new class extends Migration
                 'updated_at' => $now,
             ],
             [
-                'id' => (string) Str::uuid7(),
                 'room_id' => $treinamentoId,
                 'responsible' => 'Emerson',
                 'title' => 'Treinamento da tarde',

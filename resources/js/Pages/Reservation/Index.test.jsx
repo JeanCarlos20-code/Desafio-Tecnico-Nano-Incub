@@ -18,7 +18,7 @@ vi.mock('@inertiajs/react', () => ({
 const sampleReservations = {
     data: [
         {
-            id: 'res-1',
+            id: '1',
             room_id: 'room-1',
             room_name: 'Sala Azul',
             responsible: 'Ada Lovelace',
@@ -31,7 +31,7 @@ const sampleReservations = {
             status_label: 'Ativa',
         },
         {
-            id: 'res-2',
+            id: '2',
             room_id: 'room-1',
             room_name: 'Sala Azul',
             responsible: 'Grace Hopper',
@@ -104,16 +104,16 @@ describe('Reservation/Index', () => {
         const { container } = renderIndex();
 
         expect(screen.getByRole('heading', { name: 'Reservas' })).toBeInTheDocument();
-        expect(screen.queryByRole('columnheader', { name: 'ID' })).not.toBeInTheDocument();
-        expect(screen.queryByText('res-1')).not.toBeInTheDocument();
-        expect(screen.queryByText(/ID:/)).not.toBeInTheDocument();
+        expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument();
+        expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('2').length).toBeGreaterThan(0);
         expect(screen.getByRole('columnheader', { name: 'Sala' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Responsável' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Título' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Início' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Fim' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Participantes' })).toBeInTheDocument();
-        expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+        expect(screen.getByRole('columnheader', { name: 'Situação' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
         expect(screen.getAllByText('Ativa').length).toBeGreaterThan(0);
         expect(screen.queryByText('Cancelada')).not.toBeInTheDocument();
@@ -361,7 +361,7 @@ describe('Reservation/Index', () => {
         await user.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
 
         expect(form.patch).toHaveBeenCalledTimes(1);
-        expect(form.patch).toHaveBeenCalledWith('/reservations/res-1/cancel', expect.any(Object));
+        expect(form.patch).toHaveBeenCalledWith('/reservations/1/cancel', expect.any(Object));
     });
 
     it('shows Cancelando... while processing', async () => {

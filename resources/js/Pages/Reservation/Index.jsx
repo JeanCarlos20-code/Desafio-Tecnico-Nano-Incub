@@ -321,6 +321,9 @@ export default function Index({
                                 <thead className="bg-slate-50 text-slate-600">
                                     <tr>
                                         <th scope="col" className="px-4 py-3 font-medium">
+                                            ID
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 font-medium">
                                             Sala
                                         </th>
                                         <th scope="col" className="px-4 py-3 font-medium">
@@ -339,7 +342,7 @@ export default function Index({
                                             Participantes
                                         </th>
                                         <th scope="col" className="px-4 py-3 font-medium">
-                                            Status
+                                            Situação
                                         </th>
                                         <th scope="col" className="px-4 py-3 text-center font-medium">
                                             Ações
@@ -349,6 +352,7 @@ export default function Index({
                                 <tbody>
                                     {data.map((reservation) => (
                                         <tr key={reservation.id} className="border-t border-slate-100">
+                                            <td className="px-4 py-3 text-slate-700">{reservation.id}</td>
                                             <td className="px-4 py-3 text-slate-900">{reservation.room_name}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.responsible}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.title}</td>
@@ -374,7 +378,8 @@ export default function Index({
                     <ul className="mt-6 space-y-3 md:hidden">
                         {data.map((reservation) => (
                             <li key={reservation.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                                <p className="font-medium text-slate-900">{reservation.title}</p>
+                                <p className="text-sm text-slate-700">ID: {reservation.id}</p>
+                                <p className="mt-1 font-medium text-slate-900">{reservation.title}</p>
                                 <p className="mt-1 text-sm text-slate-700">Sala: {reservation.room_name}</p>
                                 <p className="mt-1 text-sm text-slate-700">Responsável: {reservation.responsible}</p>
                                 <p className="mt-1 text-sm text-slate-700">

@@ -35,14 +35,14 @@ class ReservationStoreHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Create')
                 ->has('rooms', 4)
-                ->where('rooms.0.id', $active->id)
+                ->where('rooms.0.id', (string) $active->id)
                 ->where('rooms.0.name', 'Sala Azul')
                 ->where('rooms', fn (Collection $rooms): bool => $rooms->contains('name', 'Sala Azul')
                     && ! $rooms->contains('name', 'Sala Cinza'))
             );
     }
 
-    public function test_store_persists_uuid_v7_adr_005_columns_and_flashes_success(): void
+    public function test_store_persists_incrementing_integer_id_adr_005_columns_and_flashes_success(): void
     {
         $user = UserModel::factory()->create();
         $room = Room::factory()->create(['capacity' => 10]);
@@ -62,8 +62,10 @@ class ReservationStoreHttpTest extends TestCase
 
         $reservation = Reservation::query()->where('title', 'Daily')->first();
         $this->assertNotNull($reservation);
-        $this->assertTrue(Str::isUuid($reservation->id));
-        $this->assertSame('7', $reservation->id[14]);
+        $this->assertFalse(Str::isUuid((string) $reservation->id));
+        $this->assertNotFalse(filter_var($reservation->id, FILTER_VALIDATE_INT));
+        $this->assertGreaterThan(0, (int) $reservation->id);
+        $this->assertNotFalse(filter_var($reservation->room_id, FILTER_VALIDATE_INT));
         $this->assertSame($room->id, $reservation->room_id);
         $this->assertSame('Ada Lovelace', $reservation->responsible);
         $this->assertSame('Daily', $reservation->title);

@@ -35,7 +35,7 @@ class RoomUpdateHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Room/Edit')
-                ->where('room.id', $room->id)
+                ->where('room.id', (string) $room->id)
                 ->where('room.name', 'Sala Azul')
                 ->where('room.capacity', 10)
                 ->where('room.is_active', false)

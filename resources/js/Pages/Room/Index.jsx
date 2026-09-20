@@ -158,6 +158,9 @@ export default function Index({
                                 <caption className="sr-only">Salas de reunião cadastradas</caption>
                                 <thead className="bg-slate-50 text-slate-600">
                                     <tr>
+                                        <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium">
+                                            ID
+                                        </th>
                                         <th scope="col" className="min-w-0 w-full px-4 py-3 font-medium">
                                             Nome
                                         </th>
@@ -165,7 +168,7 @@ export default function Index({
                                             Capacidade
                                         </th>
                                         <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium xl:w-[16%]">
-                                            Status
+                                            Situação
                                         </th>
                                         <th scope="col" className="w-0 whitespace-nowrap px-4 py-3 font-medium xl:w-[16%]">
                                             Criada em
@@ -178,6 +181,7 @@ export default function Index({
                                 <tbody>
                                     {data.map((room) => (
                                         <tr key={room.id} className="border-t border-slate-100">
+                                            <td className="w-0 whitespace-nowrap px-4 py-3 text-slate-700">{room.id}</td>
                                             <td className="min-w-0 w-full px-4 py-3 text-slate-900">{room.name}</td>
                                             <td className="w-0 whitespace-nowrap px-4 py-3 text-center text-slate-700 xl:w-[16%]">
                                                 {room.capacity}
@@ -201,7 +205,8 @@ export default function Index({
                     <ul className="mt-6 space-y-3 md:hidden">
                         {data.map((room) => (
                             <li key={room.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                                <p className="font-medium text-slate-900">{room.name}</p>
+                                <p className="text-sm text-slate-700">ID: {room.id}</p>
+                                <p className="mt-1 font-medium text-slate-900">{room.name}</p>
                                 <p className="mt-2 text-sm text-slate-700">Capacidade: {room.capacity}</p>
                                 <div className="mt-2">
                                     <StatusBadge active={room.is_active} label={room.status} />

@@ -32,8 +32,9 @@ class DemoCatalogMigrationTest extends TestCase
         ]);
 
         foreach (Room::query()->get() as $room) {
-            $this->assertTrue(Str::isUuid($room->id));
-            $this->assertSame('7', $room->id[14]);
+            $this->assertFalse(Str::isUuid((string) $room->id));
+            $this->assertNotFalse(filter_var($room->id, FILTER_VALIDATE_INT));
+            $this->assertGreaterThan(0, (int) $room->id);
             $this->assertTrue($room->is_active);
             $this->assertNull($room->deleted_at);
             $this->assertNotNull($room->created_at);
@@ -86,8 +87,10 @@ class DemoCatalogMigrationTest extends TestCase
         $reservations = [$norteMorning, $norteNext, $treinamentoAfternoon];
 
         foreach ($reservations as $reservation) {
-            $this->assertTrue(Str::isUuid($reservation->id));
-            $this->assertSame('7', $reservation->id[14]);
+            $this->assertFalse(Str::isUuid((string) $reservation->id));
+            $this->assertNotFalse(filter_var($reservation->id, FILTER_VALIDATE_INT));
+            $this->assertGreaterThan(0, (int) $reservation->id);
+            $this->assertNotFalse(filter_var($reservation->room_id, FILTER_VALIDATE_INT));
             $this->assertNotNull($reservation->created_at);
             $this->assertNotNull($reservation->updated_at);
 
