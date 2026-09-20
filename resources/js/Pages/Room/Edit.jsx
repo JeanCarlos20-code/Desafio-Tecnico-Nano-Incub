@@ -42,8 +42,8 @@ export default function Edit({ room, future_active_count = 0 }) {
                     document.getElementById(first)?.focus();
                 }
             },
-            onHttpException: showGeneralFailure,
-            onNetworkError: showGeneralFailure,
+            onInvalid: showGeneralFailure,
+            onException: showGeneralFailure,
         };
     }
 

@@ -51,8 +51,8 @@ export default function Edit({
                     document.getElementById(first)?.focus();
                 }
             },
-            onHttpException: showGeneralFailure,
-            onNetworkError: showGeneralFailure,
+            onInvalid: showGeneralFailure,
+            onException: showGeneralFailure,
         });
     }
 

@@ -1,12 +1,15 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import Login from './Login';
 
 vi.mock('@inertiajs/react', () => ({
     useForm: vi.fn(),
+    router: {
+        on: vi.fn(() => vi.fn()),
+    },
 }));
 
 function createForm(overrides = {}) {
@@ -37,6 +40,8 @@ afterEach(() => {
 
 beforeEach(() => {
     useForm.mockReset();
+    router.on.mockReset();
+    router.on.mockImplementation(() => vi.fn());
 });
 
 describe('User/Login screen', () => {
@@ -244,15 +249,18 @@ describe('User/Login screen', () => {
         const user = userEvent.setup();
         const { form } = renderLogin();
 
-        let httpExceptionResult;
+        let invalidPrevented = false;
 
-        form.post.mockImplementation((_url, options) => {
-            httpExceptionResult = options.onHttpException();
+        form.post.mockImplementation(() => {
+            const listener = router.on.mock.calls.find(([event]) => event === 'invalid')[1];
+            const event = { preventDefault: vi.fn() };
+            listener(event);
+            invalidPrevented = event.preventDefault.mock.calls.length > 0;
         });
 
         await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
-        expect(httpExceptionResult).toBe(false);
+        expect(invalidPrevented).toBe(true);
 
         const banner = screen.getByText('Não foi possível entrar. Tente novamente.');
         expect(banner).toHaveAttribute('aria-live', 'polite');

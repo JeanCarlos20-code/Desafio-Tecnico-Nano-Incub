@@ -11,6 +11,7 @@ vi.mock('@inertiajs/react', () => ({
     usePage: vi.fn(),
     router: {
         get: vi.fn(),
+        on: vi.fn(() => vi.fn()),
     },
     Link: ({ href, children, className, ...props }) => createElement('a', { href, className, ...props }, children),
 }));
@@ -72,6 +73,8 @@ beforeEach(() => {
     useForm.mockReset();
     usePage.mockReset();
     router.get.mockReset();
+    router.on.mockReset();
+    router.on.mockImplementation(() => vi.fn());
     useForm.mockReturnValue(createForm());
     mockPage();
 });

@@ -34,8 +34,8 @@ export default function Create() {
                     document.getElementById(first)?.focus();
                 }
             },
-            onHttpException: showGeneralFailure,
-            onNetworkError: showGeneralFailure,
+            onInvalid: showGeneralFailure,
+            onException: showGeneralFailure,
         });
     }
 

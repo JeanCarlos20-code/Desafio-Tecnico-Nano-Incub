@@ -106,8 +106,8 @@ export default function Create({ rooms = [], timezone = 'UTC' }) {
                     document.getElementById(first)?.focus();
                 }
             },
-            onHttpException: showGeneralFailure,
-            onNetworkError: showGeneralFailure,
+            onInvalid: showGeneralFailure,
+            onException: showGeneralFailure,
         });
     }
 
