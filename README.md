@@ -4,11 +4,11 @@ Administradores entram em `/login` com e-mail e senha. As rotas do painel, inclu
 
 Após `php artisan migrate`, o banco contém três administradores padrão:
 
-| Nome | E-mail | Senha |
-| --- | --- | --- |
-| Gertrudes | teste@mail.com | Senha123 |
-| Marcelo | teste2@mail.com | Senha123 |
-| Emerson | teste3@mail.com | Senha123 |
+| Nome      | E-mail          | Senha    |
+| --------- | --------------- | -------- |
+| Gertrudes | teste@mail.com  | Senha123 |
+| Marcelo   | teste2@mail.com | Senha123 |
+| Emerson   | teste3@mail.com | Senha123 |
 
 ## Pré-requisitos
 
@@ -90,9 +90,29 @@ Abra `http://127.0.0.1:8000` e entre com uma das contas da tabela acima.
 
 ## Decisões técnicas
 
-O overlap de reservas ativas (RF13–RF18) vive na Application: consecutivas passam, cancelada libera o intervalo, duração, capacidade e sala inativa ficam no use case. A persistência serializa criações, inativações e exclusões da mesma sala com `SELECT … FOR UPDATE` na linha de `rooms` (RNF09, ADR-006). Só a Application não impede duas requisições simultâneas de gravar o mesmo intervalo. Só um índice único (ou exclusão no banco) não expressa consecutivas, reuso após cancelamento, duração, capacidade nem sala inativa. Os dois lados juntos fecham o enunciado sem inventar restrição extra.
+Criei três tabelas principais: `users`, `rooms` e `reservations`.
 
-`rooms.id` e `reservations.id` são bigint autoincremento (`$table->id()`, `foreignId`). A listagem mostra esse ID e a coluna de situação como `Situação`. `users.id` permanece UUID v7 (`HasUuids`, ADR-002).
+Para `users`, optei por UUIDv7, já que o desafio não definia o tipo de ID. Escolhi por ser um identificador não sequencial para exposição externa e ainda manter ordenação temporal, pois combina timestamp com aleatoriedade. Para senha, usei Argon2id por ser um algoritmo memory-hard, aumentando o custo de ataques em massa com GPU/ASIC por exigir processamento e uso significativo de memória por tentativa.
+
+Já `rooms` e `reservations` usam IDs numéricos incrementais, por serem mais simples e suficientes para o escopo do projeto. Em um sistema distribuído ou com necessidade maior de IDs externos, UUIDv7 poderia ser considerado também.
+
+Na arquitetura, optei por uma abordagem hexagonal para isolar as regras de negócio do Laravel e da infraestrutura. O domínio/application fica responsável pelas regras, enquanto a infraestrutura integra Laravel, Eloquent/MySQL, autenticação, Inertia e demais detalhes externos.
+
+No frontend, também separei a camada que faz comunicação com a aplicação dos componentes React, evitando misturar acesso a dados com lógica de interface.
+
+Ao inativar uma sala que possui reuniões futuras, o usuário pode escolher entre manter ou cancelar essas reservas, sendo avisado das consequências. Na exclusão de uma sala, as reservas futuras são canceladas automaticamente, já que não faria sentido manter reuniões vinculadas a uma sala removida.
+
+Para exclusão, utilizei Soft Delete, preenchendo `deleted_at` em vez de remover fisicamente o registro, preservando o histórico.
+
+Não implementei alteração de data e horário das reservas para evitar complexidade fora do escopo. Caso seja necessário alterar esse período, a reserva pode ser cancelada e criada novamente.
+
+Além do filtro por dia solicitado, adicionei a possibilidade de filtrar reservas por intervalo de datas, mantendo um período padrão selecionado na tela.
+
+Para evitar reservas concorrentes no mesmo horário, utilizei transação com `SELECT ... FOR UPDATE`, bloqueando a sala durante a validação e criação da reserva. Assim, operações simultâneas sobre a mesma sala são serializadas.
+
+A mesma estratégia é usada quando uma reserva é criada ao mesmo tempo em que outra pessoa inativa a sala. A operação que conseguir o lock primeiro é concluída e a seguinte revalida o estado atualizado antes de continuar.
+
+Na alteração da capacidade de uma sala, verifico as reservas futuras e ativas. Se existir alguma reserva com quantidade de participantes maior que a nova capacidade, a alteração é bloqueada e o usuário é informado de que essas reservas precisam ser ajustadas antes.
 
 ## O que ficou de fora
 
