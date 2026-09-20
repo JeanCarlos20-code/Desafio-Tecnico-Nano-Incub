@@ -50,6 +50,35 @@ class IndexReservationRequestTest extends TestCase
         ])['room_id']);
     }
 
+    public function test_it_accepts_omitted_page_and_limit_and_valid_page_and_limit_bounds(): void
+    {
+        $omitted = $this->validated([]);
+        $this->assertArrayNotHasKey('page', $omitted);
+        $this->assertArrayNotHasKey('limit', $omitted);
+
+        foreach ([1, 2] as $page) {
+            foreach ([1, 20, 100] as $limit) {
+                $validated = $this->validated(['page' => $page, 'limit' => $limit]);
+                $this->assertSame($page, $validated['page']);
+                $this->assertSame($limit, $validated['limit']);
+            }
+        }
+    }
+
+    public function test_it_rejects_page_below_one_or_non_integer_with_portuguese_message(): void
+    {
+        foreach ([0, 'abc'] as $page) {
+            $this->assertSame(['Informe uma página válida.'], $this->validationErrors(['page' => $page])['page']);
+        }
+    }
+
+    public function test_it_rejects_limit_outside_one_to_one_hundred_or_non_integer_with_portuguese_message(): void
+    {
+        foreach ([0, 101, 'abc'] as $limit) {
+            $this->assertSame(['Informe um limite válido.'], $this->validationErrors(['limit' => $limit])['limit']);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
