@@ -29,7 +29,7 @@ class RoomGuestHttpTest extends TestCase
             'is_active' => false,
         ])->assertRedirect(route('login'));
 
-        $this->assertDatabaseCount('rooms', 1);
+        $this->assertDatabaseCount('rooms', 4);
         $this->assertDatabaseHas('rooms', ['name' => 'Existing']);
         $this->assertDatabaseMissing('rooms', ['name' => 'Attacker Room']);
     }

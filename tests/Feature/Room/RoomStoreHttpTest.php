@@ -44,9 +44,14 @@ class RoomStoreHttpTest extends TestCase
             ->assertRedirect(route('rooms.index'))
             ->assertSessionHas('success', 'Sala criada com sucesso.');
 
-        $this->assertDatabaseCount('rooms', 1);
+        $this->assertDatabaseCount('rooms', 4);
+        $this->assertDatabaseHas('rooms', [
+            'name' => 'Sala Azul',
+            'capacity' => 10,
+            'is_active' => 1,
+        ]);
 
-        $room = Room::query()->first();
+        $room = Room::query()->where('name', 'Sala Azul')->first();
         $this->assertNotNull($room);
         $this->assertTrue(Str::isUuid($room->id));
         $this->assertSame('7', $room->id[14]);
@@ -82,7 +87,8 @@ class RoomStoreHttpTest extends TestCase
             ->assertRedirect(route('rooms.create'))
             ->assertSessionHasErrors(['capacity' => 'A capacidade deve ser um número inteiro.']);
 
-        $this->assertDatabaseCount('rooms', 0);
+        $this->assertDatabaseCount('rooms', 3);
+        $this->assertDatabaseMissing('rooms', ['name' => 'Sala Azul']);
     }
 
     public function test_store_with_is_active_false_still_persists_is_active_true(): void
@@ -120,7 +126,7 @@ class RoomStoreHttpTest extends TestCase
             ->assertRedirect(route('rooms.index'));
 
         $this->assertFalse(Schema::hasColumn('rooms', 'location'));
-        $this->assertDatabaseCount('rooms', 1);
+        $this->assertDatabaseCount('rooms', 4);
         $this->assertDatabaseHas('rooms', [
             'name' => 'Sala Azul',
             'capacity' => 10,
