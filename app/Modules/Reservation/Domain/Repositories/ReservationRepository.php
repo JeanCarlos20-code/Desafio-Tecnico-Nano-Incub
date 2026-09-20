@@ -33,6 +33,8 @@ interface ReservationRepository
 
     public function findById(string $id): ?Reservation;
 
+    public function updateTitleAndResponsible(string $id, string $title, string $responsible): Reservation;
+
     public function markCanceled(string $id, DateTimeImmutable $cancelledAt): void;
 
     public function countActiveFutureByRoom(string $roomId, DateTimeImmutable $now): int;
