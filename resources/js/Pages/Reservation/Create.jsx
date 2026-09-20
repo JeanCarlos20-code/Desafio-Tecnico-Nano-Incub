@@ -2,11 +2,19 @@ import { Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import { store } from '../../Services/reservations';
+import {
+    calendarDateInTimeZone,
+    END_NOT_AFTER_START_MESSAGE,
+    isEndNotAfterStart,
+    isStartInPast,
+    minStartTime,
+    PAST_START_MESSAGE,
+} from './minScheduleBounds';
 
 const GENERAL_FAILURE = 'Não foi possível salvar a reserva. Tente novamente.';
 const FIELDS = ['room_id', 'responsible', 'title', 'date', 'start_time', 'end_time', 'participants'];
 
-export default function Create({ rooms = [] }) {
+export default function Create({ rooms = [], timezone = 'UTC' }) {
     const form = useForm({
         room_id: '',
         responsible: '',
@@ -17,6 +25,11 @@ export default function Create({ rooms = [] }) {
         participants: '',
     });
     const [generalError, setGeneralError] = useState('');
+    const [pastStartError, setPastStartError] = useState('');
+    const [endOrderError, setEndOrderError] = useState('');
+    const now = new Date();
+    const minDate = calendarDateInTimeZone(now, timezone);
+    const minStart = minStartTime(form.data.date, now, timezone);
     const selectedRoom = useMemo(
         () => rooms.find((room) => room.id === form.data.room_id) ?? null,
         [rooms, form.data.room_id],
@@ -55,6 +68,26 @@ export default function Create({ rooms = [] }) {
         }
 
         setGeneralError('');
+
+        if (isStartInPast(form.data.date, form.data.start_time, new Date(), timezone)) {
+            setPastStartError(PAST_START_MESSAGE);
+            setEndOrderError('');
+            const fieldId = form.data.date && form.data.date < minDate ? 'date' : 'start_time';
+            document.getElementById(fieldId)?.focus();
+
+            return;
+        }
+
+        setPastStartError('');
+
+        if (isEndNotAfterStart(form.data.date, form.data.start_time, form.data.end_time)) {
+            setEndOrderError(END_NOT_AFTER_START_MESSAGE);
+            document.getElementById('end_time')?.focus();
+
+            return;
+        }
+
+        setEndOrderError('');
 
         form.transform((data) => ({
             room_id: data.room_id,
@@ -106,6 +139,7 @@ export default function Create({ rooms = [] }) {
                 ) : (
                     <form
                         onSubmit={submit}
+                        noValidate
                         className="mt-6 space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
                     >
                         <Field id="room_id" label="Sala" error={form.errors.room_id}>
@@ -153,38 +187,41 @@ export default function Create({ rooms = [] }) {
                             />
                         </Field>
 
-                        <Field id="date" label="Data" error={form.errors.date || form.errors.starts_at}>
+                        <Field id="date" label="Data" error={form.errors.date || form.errors.starts_at || pastStartError}>
                             <input
                                 id="date"
                                 type="date"
                                 value={form.data.date}
+                                min={minDate}
                                 onChange={(event) => form.setData('date', event.target.value)}
                                 aria-required="true"
-                                aria-invalid={form.errors.date || form.errors.starts_at ? 'true' : undefined}
+                                aria-invalid={form.errors.date || form.errors.starts_at || pastStartError ? 'true' : undefined}
                                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </Field>
 
-                        <Field id="start_time" label="Horário de início" error={form.errors.start_time || form.errors.starts_at}>
+                        <Field id="start_time" label="Horário de início" error={form.errors.start_time || form.errors.starts_at || pastStartError}>
                             <input
                                 id="start_time"
                                 type="time"
                                 value={form.data.start_time}
+                                min={minStart || undefined}
                                 onChange={(event) => form.setData('start_time', event.target.value)}
                                 aria-required="true"
-                                aria-invalid={form.errors.start_time || form.errors.starts_at ? 'true' : undefined}
+                                aria-invalid={form.errors.start_time || form.errors.starts_at || pastStartError ? 'true' : undefined}
                                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </Field>
 
-                        <Field id="end_time" label="Horário de término" error={form.errors.end_time || form.errors.ends_at}>
+                        <Field id="end_time" label="Horário de término" error={form.errors.end_time || form.errors.ends_at || endOrderError}>
                             <input
                                 id="end_time"
                                 type="time"
                                 value={form.data.end_time}
+                                min={form.data.start_time || undefined}
                                 onChange={(event) => form.setData('end_time', event.target.value)}
                                 aria-required="true"
-                                aria-invalid={form.errors.end_time || form.errors.ends_at ? 'true' : undefined}
+                                aria-invalid={form.errors.end_time || form.errors.ends_at || endOrderError ? 'true' : undefined}
                                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </Field>

@@ -57,18 +57,22 @@ function mockPage() {
     });
 }
 
-function renderCreate(overrides = {}, pageRooms = rooms) {
+function renderCreate(overrides = {}, pageRooms = rooms, timezone) {
     const form = createForm(overrides);
     useForm.mockReturnValue(form);
+    const props = timezone === undefined ? { rooms: pageRooms } : { rooms: pageRooms, timezone };
 
-    return { form, ...render(<Create rooms={pageRooms} />) };
+    return { form, ...render(<Create {...props} />) };
 }
 
 afterEach(() => {
     cleanup();
+    vi.useRealTimers();
 });
 
 beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-21T08:00:00.000Z'));
     useForm.mockReset();
     usePage.mockReset();
     mockPage();
@@ -197,5 +201,131 @@ describe('Reservation/Create', () => {
         expect(screen.getByText('Nenhuma sala ativa está disponível.')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Nova sala' })).toHaveAttribute('href', '/rooms/create');
         expect(screen.queryByRole('button', { name: 'Criar reserva' })).not.toBeInTheDocument();
+    });
+
+    it('sets date min to today and start-time min to current HH:MM while the selected date is today', () => {
+        renderCreate({ data: { date: '2026-09-21' } }, rooms, 'UTC');
+
+        expect(screen.getByLabelText(/^Data/)).toHaveAttribute('min', '2026-09-21');
+        expect(screen.getByLabelText(/Horário de início/)).toHaveAttribute('min', '08:00');
+    });
+
+    it('omits start-time min when the selected date is after today', () => {
+        renderCreate({ data: { date: '2026-09-22' } });
+
+        expect(screen.getByLabelText(/^Data/)).toHaveAttribute('min', '2026-09-21');
+        expect(screen.getByLabelText(/Horário de início/)).not.toHaveAttribute('min');
+    });
+
+    it('shows A data não pode estar no passado. and does not call form.post for a past start', async () => {
+        const user = userEvent.setup();
+        const pastDate = renderCreate({
+            data: {
+                room_id: 'room-1',
+                responsible: 'Ada',
+                title: 'Daily',
+                date: '2026-09-20',
+                start_time: '10:00',
+                end_time: '10:30',
+                participants: 2,
+            },
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
+
+        expect(screen.getAllByText('A data não pode estar no passado.')).not.toHaveLength(0);
+        expect(pastDate.form.post).not.toHaveBeenCalled();
+        expect(pastDate.form.transform).not.toHaveBeenCalled();
+
+        cleanup();
+
+        const pastTime = renderCreate({
+            data: {
+                room_id: 'room-1',
+                responsible: 'Ada',
+                title: 'Daily',
+                date: '2026-09-21',
+                start_time: '07:00',
+                end_time: '07:30',
+                participants: 2,
+            },
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
+
+        expect(screen.getAllByText('A data não pode estar no passado.')).not.toHaveLength(0);
+        expect(pastTime.form.post).not.toHaveBeenCalled();
+        expect(pastTime.form.transform).not.toHaveBeenCalled();
+    });
+
+    it('shows O término deve ser posterior ao início. and does not call form.post when end is not after start', async () => {
+        const user = userEvent.setup();
+        const inverted = renderCreate({
+            data: {
+                room_id: 'room-1',
+                responsible: 'Ada',
+                title: 'Daily',
+                date: '2026-09-21',
+                start_time: '10:00',
+                end_time: '09:00',
+                participants: 2,
+            },
+        });
+
+        expect(screen.getByLabelText(/Horário de término/)).toHaveAttribute('min', '10:00');
+
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
+
+        expect(screen.getByText('O término deve ser posterior ao início.')).toBeInTheDocument();
+        expect(inverted.form.post).not.toHaveBeenCalled();
+        expect(inverted.form.transform).not.toHaveBeenCalled();
+
+        cleanup();
+
+        const equal = renderCreate({
+            data: {
+                room_id: 'room-1',
+                responsible: 'Ada',
+                title: 'Daily',
+                date: '2026-09-21',
+                start_time: '10:00',
+                end_time: '10:00',
+                participants: 2,
+            },
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
+
+        expect(screen.getByText('O término deve ser posterior ao início.')).toBeInTheDocument();
+        expect(equal.form.post).not.toHaveBeenCalled();
+        expect(equal.form.transform).not.toHaveBeenCalled();
+    });
+
+    it('still posts the existing starts_at transform when today start equals now', async () => {
+        const user = userEvent.setup();
+        const { form } = renderCreate({
+            data: {
+                room_id: 'room-1',
+                responsible: 'Ada',
+                title: 'Daily',
+                date: '2026-09-21',
+                start_time: '08:00',
+                end_time: '08:30',
+                participants: 2,
+            },
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Criar reserva' }));
+
+        expect(form.post).toHaveBeenCalledTimes(1);
+        expect(form.post).toHaveBeenCalledWith('/reservations', expect.any(Object));
+        expect(form.lastTransform(form.data)).toEqual({
+            room_id: 'room-1',
+            responsible: 'Ada',
+            title: 'Daily',
+            starts_at: '2026-09-21 08:00:00',
+            ends_at: '2026-09-21 08:30:00',
+            participants: 2,
+        });
     });
 });

@@ -8,6 +8,6 @@ final class StartsInPast extends RuntimeException
 {
     public function __construct()
     {
-        parent::__construct('O horário inicial não pode estar no passado.');
+        parent::__construct('A data não pode estar no passado.');
     }
 }

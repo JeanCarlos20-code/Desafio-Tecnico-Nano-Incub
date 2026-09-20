@@ -145,7 +145,7 @@ class ReservationStoreHttpTest extends TestCase
                 'ends_at' => '2026-09-21 07:30:00',
             ]))
             ->assertRedirect(route('reservations.create'))
-            ->assertSessionHasErrors(['starts_at' => 'O horário inicial não pode estar no passado.']);
+            ->assertSessionHasErrors(['starts_at' => 'A data não pode estar no passado.']);
 
         $this->actingAs($user)
             ->from(route('reservations.create'))
