@@ -87,3 +87,17 @@ composer run dev
 Esse script sobe `php artisan serve`, `php artisan queue:listen`, `php artisan pail` e `npm run dev`.
 
 Abra `http://127.0.0.1:8000` e entre com uma das contas da tabela acima.
+
+## Decisões técnicas
+
+O overlap de reservas ativas (RF13–RF18) vive na Application: consecutivas passam, cancelada libera o intervalo, duração, capacidade e sala inativa ficam no use case. A persistência serializa criações, inativações e exclusões da mesma sala com `SELECT … FOR UPDATE` na linha de `rooms` (RNF09, ADR-006). Só a Application não impede duas requisições simultâneas de gravar o mesmo intervalo. Só um índice único (ou exclusão no banco) não expressa consecutivas, reuso após cancelamento, duração, capacidade nem sala inativa. Os dois lados juntos fecham o enunciado sem inventar restrição extra.
+
+`rooms.id` e `reservations.id` são bigint autoincremento (`$table->id()`, `foreignId`). A listagem mostra esse ID e a coluna de situação como `Situação`. `users.id` permanece UUID v7 (`HasUuids`, ADR-002).
+
+## O que ficou de fora
+
+O ADR-001 cortou cadastro público, edição de reserva, calendário, e-mail e papéis extras. Com mais tempo, esses itens seriam os primeiros a voltar, sem reabrir o recorte do desafio.
+
+## Uso de IA
+
+Cursor (agents) foi usado para planejar, implementar e testar. O autor é responsável pelo código.
