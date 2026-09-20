@@ -25,6 +25,7 @@ class IndexReservationController extends Controller
         $startsOn = $request->validated('starts_on');
         $endsOn = $request->validated('ends_on');
         $roomId = $request->validated('room_id');
+        $roomId = $roomId !== null ? (string) $roomId : null;
         $page = max(1, (int) $request->query('page', 1));
 
         $result = $listReservations->execute($page, 15, $roomId, $period, $startsOn, $endsOn, $timezone);

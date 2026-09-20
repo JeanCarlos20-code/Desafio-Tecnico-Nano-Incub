@@ -25,7 +25,7 @@ class StoreReservationController extends Controller
 
         try {
             $createReservation->execute(
-                $data['room_id'],
+                (string) $data['room_id'],
                 $data['responsible'],
                 $data['title'],
                 new DateTimeImmutable((string) $data['starts_at'], $timezone),
