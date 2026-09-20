@@ -17,7 +17,25 @@ Você é a interface humana do LangGraph. **Não replique o workflow e não edit
 
 ## Início
 
-Para um pedido novo, execute:
+Antes de `harness task start`, verifique se há gate humano aberto:
+- nesta conversa (task atual / última action); ou
+- em `.git/harness/actions/` via `harness task action <id>` já conhecido.
+
+Não existe `harness task list`. Não bloqueie `task start` na CLI.
+
+Se a action for `kind=human`, **não** chame `harness task start`. Classifique o relato nesse gate:
+
+- `gate=commit` + adição de escopo → sugira merge + nova task e **espere** sim/não. Não chame `approve-commit` nem `task start` até aceite explícito.
+- `gate=commit` + substituição → sugira cancel + nova task e **espere**. Não chame `cancel` nem `task start` até aceite.
+- `gate=commit` + ajuste local → `harness task revise-code` imediatamente. Não sugira merge-and-start nem cancel-and-start.
+- `gate=plan` + ajuste local no plano → `harness task revise-plan`. Não chame `task start`.
+- Relato solto (bug/observação que não é pedido claro de trabalho novo nem adição/substituição/ajuste classificado) → não chame `task start`.
+
+`task start` só depois de aceite explícito de uma sugestão classificada, ou de um pedido claro de trabalho novo quando nenhum gate humano está aberto.
+
+Se o usuário autorizar explicitamente uma nova task enquanto outra permanece aberta, `task start` é permitido depois desse aceite.
+
+Para um pedido novo **sem** gate humano aberto:
 
 ```bash
 harness task start "<pedido literal do usuário>"
@@ -47,13 +65,17 @@ O worker chama `harness task complete-phase` ao terminar. Depois consulte `harne
 
 ### `kind=human`, `gate=plan`
 
-Mostre o action nesta ordem:
+Cole `action.summary` na íntegra. Não reescreva. Não corte. Não drope `## Plano`, `## Testes pontuais` ou `## Comandos após o Execute`.
 
-1. **Plano / tarefa** (`summary` → seção Plano).
-2. **Testes pontuais** (`tests`): o que será testado em **unit**, **integration** e **e2e** (regra de negócio, dado, validação, fluxo), classificado segundo `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md`.
-3. **Comandos após o Execute** (`gates` e `stack_verify_required`): o que o Harness vai rodar antes da review, para o humano conferir se não falta comando.
+Se o summary já tiver a frase `sem testes para esse plano pois ele é apenas ...`, mostre-a como está.
 
-Não monte tabela de commits. Não implemente. Só depois de aprovação explícita rode:
+Se `action.summary` estiver ausente, mostre os três campos do action (`summary` / `tests` / `gates`) nessa ordem e ainda pergunte se o humano aprova o plano. Não invente testes.
+
+Depois de mostrar o summary, pergunte se o humano aprova o plano.
+
+Não implemente código de produto nem do harness neste gate. Não apresente `harness.commits`.
+
+Só depois de aprovação explícita rode:
 
 ```bash
 harness task approve-plan <task-id>
