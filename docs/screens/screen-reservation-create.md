@@ -187,11 +187,12 @@ Requirements:
 
 - display dates as `DD/MM/YYYY`;
 - submit an unambiguous value such as `YYYY-MM-DD`;
-- interpret the date using the application's configured timezone;
+- interpret the date using the application's configured timezone (`timezone` Inertia prop, `config('app.timezone')`);
+- set the native date input `min` to the current calendar day in that timezone (`YYYY-MM-DD`);
 - combine it with the start and end times on the server;
 - reject the reservation if the resulting start datetime has already occurred.
 
-The date alone is not sufficient to validate the past rule. A reservation for today is valid only when its complete start datetime is still in the future.
+The date alone is not sufficient to validate the past rule. A reservation for today is valid only when its complete start datetime is still in the future (equal to now is accepted). React blocks submit when the combined start is before now; Laravel remains the write authority.
 
 ### Start time
 
@@ -205,8 +206,11 @@ Requirements:
 
 - use a time input or accessible time picker;
 - submit an unambiguous 24-hour value such as `09:00`;
+- while the selected date is today, set the native start-time input `min` to the current `HH:MM` in the page timezone;
+- omit start-time `min` when the selected date is after today, so any valid clock time may be chosen;
 - combine it with the selected date on the server;
-- reject a resulting start datetime in the past.
+- if the administrator submits a date before today, or today plus a start time whose combined `starts_at` is before now, React shows `A data não pode estar no passado.` and does not POST;
+- Laravel still rejects a crafted past `starts_at` with the same message.
 
 ### End time
 
@@ -221,7 +225,10 @@ Requirements:
 - use a time input or accessible time picker;
 - submit an unambiguous 24-hour value such as `10:00`;
 - combine it with the selected date on the server;
-- require the resulting end datetime to be later than the start datetime.
+- require the resulting end datetime to be later than the start datetime;
+- set the native end-time input `min` to the selected start time when that start time is filled;
+- if the administrator submits an end time that is not after the start time, React shows `O término deve ser posterior ao início.` and does not POST;
+- Laravel still rejects a crafted `ends_at` that is not after `starts_at` with the same message.
 
 Because this design provides one date for both times, reservations are modeled as starting and ending on the same calendar day. This decision should be documented in the `README.md` because the challenge supplies separate start and end datetimes but does not explicitly define overnight reservations.
 
@@ -291,10 +298,10 @@ Invalid examples:
 10:00 → 09:00
 ```
 
-Suggested message:
+Live error (React submit lock and FormRequest `ends_at.after`):
 
 ```text
-O horário de término deve ser posterior ao horário de início.
+O término deve ser posterior ao início.
 ```
 
 ### Duration
@@ -333,12 +340,12 @@ A Sala Azul possui capacidade máxima para 8 participantes.
 
 ### Reservation in the past
 
-The start datetime must be later than the current time according to the application's configured timezone.
+The start datetime must not be before the current time according to the application's configured timezone. Equal to now is accepted. React applies the date/start-time `min` bounds and the no-POST lock as UX only. `CreateReservation` remains the authority.
 
-Suggested message:
+Live error (React submit lock and server `StartsInPast`):
 
 ```text
-Não é possível criar uma reserva com horário de início no passado.
+A data não pode estar no passado.
 ```
 
 ### Time conflict
