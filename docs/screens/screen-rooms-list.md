@@ -30,7 +30,7 @@ Reference file:
 Provide a clear administrative view where the user can:
 
 - see all registered rooms;
-- identify each room's capacity and current status;
+- identify each room's persisted id, capacity, and current situation;
 - open the room creation form;
 - open the room editing form;
 - delete a room after explicit confirmation.
@@ -117,13 +117,14 @@ The table displays one row per room.
 
 | Column | Source | Display rules |
 | --- | --- | --- |
+| `ID` | Persisted room id | Display the identifier returned by the backend. Stay compact with `w-0` below `xl`. |
 | `Nome` | Room name | Plain text; do not silently truncate short names. This column stays the widest (`w-full` + `min-w-0`, no max-width, no `xl:w-[16%]`). |
 | `Capacidade` | Room capacity | Positive integer centered with the `Capacidade` header (`text-center`). Stay compact with `w-0` below `xl`. At Tailwind `xl` and above, share leftover width with `xl:w-[16%]`. |
-| `Status` | Active state | Colored status badge. Stay compact with `w-0` below `xl`. At Tailwind `xl` and above, share leftover width with `xl:w-[16%]`. |
+| `Situação` | Active state | Colored status badge. Stay compact with `w-0` below `xl`. At Tailwind `xl` and above, share leftover width with `xl:w-[16%]`. |
 | `Criada em` | Creation timestamp | Format as `DD/MM/YYYY` in the configured application timezone. Stay compact with `w-0` below `xl`. At Tailwind `xl` and above, share leftover width with `xl:w-[16%]`. |
 | `Ações` | Available operations | Edit and delete icon buttons centered with the `Ações` header (`text-center`, not `text-right`). Stay compact with `w-0` below `xl` so this column does not grow larger than `Nome`. At Tailwind `xl` and above, share leftover width with `xl:w-[16%]`. |
 
-The room identifier is not shown in the list or form. Keep it in persistence, Inertia props, React keys, and `/rooms/{room}` routes.
+The room identifier is shown in the list as column `ID`. Keep it in persistence, Inertia props, React keys, and `/rooms/{room}` routes. The room form does not show the identifier. The filter label stays `Status`.
 
 ### Status badge
 
@@ -297,7 +298,7 @@ Flash messages must be announced through an accessible live region and must not 
 - show all table columns;
 - keep leftover-width priority on `Nome` via `w-full` + `min-w-0` and no max-width;
 - center each capacity integer under the `Capacidade` header with shared `text-center`;
-- at Tailwind `xl` (1280px) and above, give `Capacidade`, `Status`, `Criada em`, and `Ações` a leftover share (`xl:w-[16%]` each) so the name gutter stays smaller;
+- at Tailwind `xl` (1280px) and above, give `Capacidade`, `Situação`, `Criada em`, and `Ações` a leftover share (`xl:w-[16%]` each) so the name gutter stays smaller;
 - below `xl`, keep those four columns compact with `w-0` + `whitespace-nowrap` so `Nome` stays the largest column and `Ações` does not stretch;
 - center the `Ações` header and row actions (`text-center`);
 - keep the desktop table as `table-auto` inside `overflow-x-auto`;
@@ -368,7 +369,7 @@ Flash messages must be announced through an accessible live region and must not 
 ## Acceptance criteria
 
 - [ ] Only authenticated administrators can access `/rooms`.
-- [ ] The list displays name, capacity, status, creation date, and actions for every room. The room identifier is not shown in the list or form.
+- [ ] The list displays ID, name, capacity, situation (`Situação`), creation date, and actions for every room. The room identifier is visible in the list and is not shown in the form.
 - [ ] Active and inactive rooms use distinct text labels and visual badges.
 - [ ] The status filter supports `Todas`, `Ativas`, and `Inativas`, is stored in the URL, and is applied on the server.
 - [ ] Soft-deleted rooms never appear in this list.

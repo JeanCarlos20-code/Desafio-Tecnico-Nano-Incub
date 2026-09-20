@@ -159,7 +159,7 @@ The table displays one row per reservation.
 | `Início` | Start datetime | `HH:mm` when a day is selected |
 | `Fim` | End datetime | `HH:mm` when a day is selected |
 | `Participantes` | Participant count | Positive integer |
-| `Status` | Reservation state | Text badge |
+| `Situação` | Reservation state | Text badge |
 | `Ações` | Available operations | Cancel action for eligible active reservations |
 
 If the interface later allows the day filter to be cleared, `Início` and `Fim` must include the date as `DD/MM/YYYY HH:mm` to avoid ambiguity.
@@ -395,7 +395,7 @@ Requirements:
 ## Acceptance criteria
 
 - [ ] Only authenticated administrators can access `/reservations`.
-- [ ] The list displays ID, room, responsible person, title, start, end, participant count, status, and actions.
+- [ ] The list displays ID, room, responsible person, title, start, end, participant count, situation (`Situação`), and actions.
 - [ ] Reservations are ordered by start datetime in ascending chronological order.
 - [ ] The room filter displays only reservations from the selected room.
 - [ ] The day filter displays only reservations belonging to the selected local calendar day.
