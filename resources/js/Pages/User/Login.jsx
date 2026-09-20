@@ -53,7 +53,7 @@ export default function Login() {
         <div className="flex min-h-dvh items-center justify-center-safe overflow-x-hidden bg-slate-100 px-6 py-8">
             <div
                 data-layout="login-card"
-                className="mx-auto grid max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl lg:grid-cols-[minmax(0,46%)_minmax(0,54%)]"
+                className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-xl xl:max-w-7xl lg:grid-cols-[minmax(0,46%)_minmax(0,54%)]"
             >
                 <BrandPanel footer="Mais produtividade para o seu time." />
 
