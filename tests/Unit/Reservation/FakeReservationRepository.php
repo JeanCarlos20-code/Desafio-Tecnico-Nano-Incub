@@ -20,6 +20,12 @@ final class FakeReservationRepository implements ReservationRepository
     /** @var list<array{id: string, cancelledAt: DateTimeImmutable}> */
     public array $canceled = [];
 
+    /** @var list<array{id: string, title: string, responsible: string}> */
+    public array $updated = [];
+
+    /** @var list<string> */
+    public array $occupancyMethodCalls = [];
+
     public function seed(Reservation $reservation): void
     {
         $this->reservations[$reservation->id] = $reservation;
@@ -55,6 +61,8 @@ final class FakeReservationRepository implements ReservationRepository
 
     public function hasActiveOverlap(string $roomId, DateTimeImmutable $startsAt, DateTimeImmutable $endsAt): bool
     {
+        $this->occupancyMethodCalls[] = 'hasActiveOverlap';
+
         foreach ($this->reservations as $reservation) {
             if ($reservation->roomId !== $roomId || $reservation->cancelledAt !== null) {
                 continue;
@@ -104,6 +112,28 @@ final class FakeReservationRepository implements ReservationRepository
         return $this->reservations[$id] ?? null;
     }
 
+    public function updateTitleAndResponsible(string $id, string $title, string $responsible): Reservation
+    {
+        $this->updated[] = compact('id', 'title', 'responsible');
+
+        $existing = $this->reservations[$id];
+        $this->reservations[$id] = new Reservation(
+            id: $existing->id,
+            roomId: $existing->roomId,
+            responsible: $responsible,
+            title: $title,
+            startsAt: $existing->startsAt,
+            endsAt: $existing->endsAt,
+            participants: $existing->participants,
+            cancelledAt: $existing->cancelledAt,
+            createdAt: $existing->createdAt,
+            updatedAt: $existing->updatedAt,
+            roomName: $existing->roomName,
+        );
+
+        return $this->reservations[$id];
+    }
+
     public function markCanceled(string $id, DateTimeImmutable $cancelledAt): void
     {
         $this->canceled[] = compact('id', 'cancelledAt');
@@ -142,6 +172,8 @@ final class FakeReservationRepository implements ReservationRepository
 
     public function countActiveFutureExceedingCapacity(string $roomId, DateTimeImmutable $now, int $capacity): int
     {
+        $this->occupancyMethodCalls[] = 'countActiveFutureExceedingCapacity';
+
         $count = 0;
 
         foreach ($this->reservations as $reservation) {

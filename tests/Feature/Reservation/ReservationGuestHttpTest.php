@@ -53,6 +53,8 @@ class ReservationGuestHttpTest extends TestCase
             'GET /reservations' => ['get', '/reservations'],
             'GET /reservations/create' => ['get', '/reservations/create'],
             'POST /reservations' => ['post', '/reservations'],
+            'GET /reservations/{id}/edit' => ['get', "/reservations/{$id}/edit"],
+            'PUT /reservations/{id}' => ['put', "/reservations/{$id}"],
             'PATCH /reservations/{id}/cancel' => ['patch', "/reservations/{$id}/cancel"],
         ];
     }
