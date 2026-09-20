@@ -3,7 +3,13 @@ import { useEffect, useId, useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import { destroy, visitIndex } from '../../Services/rooms';
 
-export default function Index({ rooms, loadError = false, loading = false }) {
+export default function Index({
+    rooms,
+    filters = { status: 'all' },
+    hasAny = false,
+    loadError = false,
+    loading = false,
+}) {
     const data = rooms?.data ?? [];
     const [failed, setFailed] = useState(Boolean(loadError));
     const [pending, setPending] = useState(null);
@@ -48,7 +54,7 @@ export default function Index({ rooms, loadError = false, loading = false }) {
 
     function retry() {
         setFailed(false);
-        visitIndex({
+        visitIndex(statusQuery(filters.status), {
             onError: () => setFailed(true),
             onHttpException: () => {
                 setFailed(true);
@@ -63,7 +69,12 @@ export default function Index({ rooms, loadError = false, loading = false }) {
         });
     }
 
-    const empty = !failed && !loading && data.length === 0;
+    function applyStatus(status) {
+        visitIndex({ status, page: 1 });
+    }
+
+    const empty = !failed && !loading && data.length === 0 && !hasAny;
+    const filteredEmpty = !failed && !loading && data.length === 0 && hasAny;
 
     return (
         <AppLayout>
@@ -100,6 +111,22 @@ export default function Index({ rooms, loadError = false, loading = false }) {
                 </div>
             ) : null}
 
+            <div className="mt-6 max-w-xs">
+                <label htmlFor="status" className="block text-sm font-medium text-slate-800">
+                    Status
+                </label>
+                <select
+                    id="status"
+                    value={filters.status ?? 'all'}
+                    onChange={(event) => applyStatus(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="all">Todas</option>
+                    <option value="active">Ativas</option>
+                    <option value="inactive">Inativas</option>
+                </select>
+            </div>
+
             {empty ? (
                 <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
                     <p className="text-base font-medium text-slate-900">Nenhuma sala cadastrada.</p>
@@ -115,7 +142,15 @@ export default function Index({ rooms, loadError = false, loading = false }) {
                 </div>
             ) : null}
 
-            {!failed && !empty && !loading ? (
+            {filteredEmpty ? (
+                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                    <p className="text-base font-medium text-slate-900">
+                        Nenhuma sala encontrada para o filtro selecionado.
+                    </p>
+                </div>
+            ) : null}
+
+            {!failed && !empty && !filteredEmpty && !loading ? (
                 <>
                     <div className="mt-6 hidden min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:block">
                         <div className="overflow-x-auto">
@@ -213,6 +248,11 @@ export default function Index({ rooms, loadError = false, loading = false }) {
                         <p className="mt-2 text-sm text-slate-700">
                             Tem certeza de que deseja excluir a sala “{pending.name}”?
                         </p>
+                        {pending.has_reservations ? (
+                            <p className="mt-2 text-sm text-slate-700">
+                                As reuniões ativas desta sala serão canceladas e deixarão de aparecer na listagem.
+                            </p>
+                        ) : null}
                         <p className="mt-1 text-sm text-slate-600">Esta ação não poderá ser desfeita.</p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
@@ -238,6 +278,10 @@ export default function Index({ rooms, loadError = false, loading = false }) {
             ) : null}
         </AppLayout>
     );
+}
+
+function statusQuery(status) {
+    return status && status !== 'all' ? { status } : {};
 }
 
 function RowActions({ room, onDelete }) {

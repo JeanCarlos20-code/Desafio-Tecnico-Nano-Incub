@@ -3,10 +3,12 @@
 namespace App\Modules\Room\Infra\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Room\Application\Errors\DeactivationDecisionRequired;
 use App\Modules\Room\Application\Errors\RoomNotFound;
 use App\Modules\Room\Application\UseCases\UpdateRoom;
 use App\Modules\Room\Infra\Http\Requests\UpdateRoomRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class UpdateRoomController extends Controller
 {
@@ -15,16 +17,22 @@ class UpdateRoomController extends Controller
         $data = $request->validated();
 
         try {
-            $updateRoom->execute(
+            $result = $updateRoom->execute(
                 $room,
                 $data['name'],
                 (int) $data['capacity'],
-                array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+                $request->boolean('is_active'),
+                $data['scheduled_meetings_action'] ?? null,
             );
         } catch (RoomNotFound) {
             abort(404);
+        } catch (DeactivationDecisionRequired $exception) {
+            throw ValidationException::withMessages([
+                'scheduled_meetings_action' => 'Informe o que deseja fazer com as reuniões programadas.',
+                'future_active_count' => [(string) $exception->futureActiveCount],
+            ]);
         }
 
-        return redirect()->route('rooms.index')->with('success', 'Sala atualizada com sucesso.');
+        return redirect()->route('rooms.index')->with('success', $result['flash']);
     }
 }

@@ -24,6 +24,7 @@ const sampleRooms = {
             is_active: true,
             status: 'Ativa',
             created_at: '18/09/2026',
+            has_reservations: true,
         },
         {
             id: 'id-2',
@@ -32,6 +33,7 @@ const sampleRooms = {
             is_active: false,
             status: 'Inativa',
             created_at: '17/09/2026',
+            has_reservations: false,
         },
     ],
     total: 2,
@@ -182,8 +184,35 @@ describe('Room/Index', () => {
         expect(mobileList.className).toMatch(/md:hidden/);
     });
 
+    it('applies status through the Inertia service, resets page to 1, and warns on delete when has_reservations', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        render(<Index rooms={sampleRooms} filters={{ status: 'all' }} hasAny />);
+
+        expect(screen.getByLabelText('Status')).toHaveValue('all');
+        await user.selectOptions(screen.getByLabelText('Status'), 'inactive');
+
+        expect(router.get).toHaveBeenCalledWith('/rooms', { status: 'inactive', page: 1 }, {});
+
+        await user.click(screen.getAllByRole('button', { name: 'Excluir Sala Azul' })[0]);
+
+        expect(screen.getByRole('dialog')).toHaveTextContent(
+            'As reuniões ativas desta sala serão canceladas e deixarão de aparecer na listagem.',
+        );
+        expect(form.delete).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+        await user.click(screen.getAllByRole('button', { name: 'Excluir Sala Cinza' })[0]);
+
+        expect(screen.getByRole('dialog')).not.toHaveTextContent(
+            'As reuniões ativas desta sala serão canceladas e deixarão de aparecer na listagem.',
+        );
+    });
+
     it('shows the empty state and Nova sala when there are no rooms', () => {
-        render(<Index rooms={{ data: [], total: 0 }} />);
+        render(<Index rooms={{ data: [], total: 0 }} hasAny={false} />);
 
         expect(screen.getByText('Nenhuma sala cadastrada.')).toBeInTheDocument();
         expect(screen.getAllByRole('link', { name: 'Nova sala' }).length).toBeGreaterThan(1);

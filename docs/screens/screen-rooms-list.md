@@ -83,6 +83,34 @@ The content header contains:
 
 On desktop, the title block stays on the left and the primary action stays on the right. On smaller screens, they may stack vertically.
 
+## Status filter
+
+The page provides one server-driven filter so the administrator can see active rooms, inactive rooms, or both. Soft-deleted rooms never appear.
+
+| Filter | Control | Query parameter | Default |
+| --- | --- | --- | --- |
+| `Status` | Select | `status` | `all` (`Todas`) |
+
+| Visible label | Query value | Result |
+| --- | --- | --- |
+| `Todas` | `all` or omitted | Active and inactive rooms |
+| `Ativas` | `active` | Only `is_active = true` |
+| `Inativas` | `inactive` | Only `is_active = false` |
+
+Example URL:
+
+```text
+/rooms?status=inactive
+```
+
+Requirements:
+
+- store the filter in the URL so the view can be refreshed and shared;
+- reset pagination to the first page when the filter changes;
+- use server-side filtering as the authoritative implementation;
+- keep the selected value after navigation or validation failures;
+- label the control explicitly (`Status`).
+
 ## Rooms table
 
 The table displays one row per room.
@@ -140,12 +168,25 @@ Deleting a room is a destructive action and must always require explicit confirm
 
 The confirmation should be displayed as a modal dialog rather than a separate page.
 
-Suggested content:
+Suggested content when the room has no reservations:
 
 ```text
 Excluir sala?
 
 Tem certeza de que deseja excluir a sala “Sala Azul”?
+Esta ação não poderá ser desfeita.
+
+Cancelar
+Excluir sala
+```
+
+When the room has reservations, the dialog **must** warn that active meetings will be canceled. There is no keep-meetings choice on delete.
+
+```text
+Excluir sala?
+
+Tem certeza de que deseja excluir a sala “Sala Azul”?
+As reuniões ativas desta sala serão canceladas e deixarão de aparecer na listagem.
 Esta ação não poderá ser desfeita.
 
 Cancelar
@@ -170,15 +211,9 @@ Sala excluída com sucesso.
 
 ### Room with reservations
 
-The recommended behavior is to prevent deletion when the room has associated reservation records, preserving historical integrity.
+Deletion is allowed. The backend cancels every active reservation of that room (`cancelled_at`) and soft-deletes the room in the **same transaction**, with a `SELECT … FOR UPDATE` lock on the room (ADR-006). Canceled meetings leave the reservations list.
 
-Suggested backend error:
-
-```text
-Não é possível excluir uma sala que possui reservas.
-```
-
-This decision must be enforced by the backend and database relationship, not only by the interface, and should be documented in the `README.md` because the challenge leaves this case open.
+The dialog warning is mandatory when any reservation exists for the room. The backend must still cancel and delete atomically if the request arrives without the UI warning.
 
 ## Data ordering and pagination
 
@@ -316,14 +351,18 @@ Flash messages must be announced through an accessible live region and must not 
 ## Required states
 
 - populated room list;
+- all-status filter;
+- active-only filter;
+- inactive-only filter;
 - empty room list;
+- empty filtered list;
 - loading state;
 - unexpected load failure;
 - account menu open and closed;
 - delete confirmation open and closed;
+- delete confirmation with reservation-cancellation warning;
 - deletion in progress;
 - deletion successful;
-- deletion rejected because the room has reservations;
 - expired or unauthenticated session.
 
 ## Acceptance criteria
@@ -331,14 +370,17 @@ Flash messages must be announced through an accessible live region and must not 
 - [ ] Only authenticated administrators can access `/rooms`.
 - [ ] The list displays name, capacity, status, creation date, and actions for every room. The room identifier is not shown in the list or form.
 - [ ] Active and inactive rooms use distinct text labels and visual badges.
+- [ ] The status filter supports `Todas`, `Ativas`, and `Inativas`, is stored in the URL, and is applied on the server.
+- [ ] Soft-deleted rooms never appear in this list.
 - [ ] Creation dates are displayed as `DD/MM/YYYY`.
 - [ ] `Nova sala` navigates to `/rooms/create`.
 - [ ] The edit action navigates to `/rooms/{room}/edit`.
 - [ ] The delete action always opens a confirmation dialog before sending a request.
-- [ ] Canceling the dialog does not modify the room.
+- [ ] When the room has reservations, the dialog warns that active meetings will be canceled.
+- [ ] Canceling the dialog does not modify the room or its reservations.
 - [ ] Confirming deletion sends `DELETE /rooms/{room}` only once.
+- [ ] Deletion cancels active reservations and soft-deletes the room in one transaction.
 - [ ] Deletion success and failure messages are visible and accessible.
-- [ ] A room with associated reservations cannot be deleted under the recommended integrity policy.
 - [ ] The screen provides an appropriate empty state when no rooms exist.
 - [ ] The sidebar correctly marks `Salas` as the current page.
 - [ ] The authenticated administrator data is not hardcoded.

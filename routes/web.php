@@ -1,5 +1,9 @@
 <?php
 
+use App\Modules\Reservation\Infra\Http\Controllers\CancelReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\CreateReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\IndexReservationController;
+use App\Modules\Reservation\Infra\Http\Controllers\StoreReservationController;
 use App\Modules\Room\Infra\Http\Controllers\CreateRoomController;
 use App\Modules\Room\Infra\Http\Controllers\DestroyRoomController;
 use App\Modules\Room\Infra\Http\Controllers\EditRoomController;
@@ -7,28 +11,21 @@ use App\Modules\Room\Infra\Http\Controllers\IndexRoomController;
 use App\Modules\Room\Infra\Http\Controllers\StoreRoomController;
 use App\Modules\Room\Infra\Http\Controllers\UpdateRoomController;
 use App\Modules\User\Infra\Http\Controllers\LoginController;
-use App\Modules\User\Infra\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'create'])->name('home');
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->name('login.store');
-
-    Route::get('/register', [UserController::class, 'create'])->name('register');
-    Route::post('/register', [UserController::class, 'store'])->name('register.store');
-
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
 });
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-    Route::get('/reservations', function () {
-        return Inertia::render('Reservation/Index');
-    })->name('reservations.index');
+    Route::get('/reservations', IndexReservationController::class)->name('reservations.index');
+    Route::get('/reservations/create', CreateReservationController::class)->name('reservations.create');
+    Route::post('/reservations', StoreReservationController::class)->name('reservations.store');
+    Route::patch('/reservations/{reservation}/cancel', CancelReservationController::class)->name('reservations.cancel');
 
     Route::get('/rooms', IndexRoomController::class)->name('rooms.index');
     Route::get('/rooms/create', CreateRoomController::class)->name('rooms.create');

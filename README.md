@@ -2,6 +2,10 @@
 
 Administradores entram em `/login` com e-mail e senha. As rotas do painel, incluindo `/reservations`, exigem uma sessão autenticada.
 
-A rota `/register` permanece publicamente acessível como conveniência do desafio técnico. Auto-cadastro público de administrador não é recomendado em produção.
+Após `php artisan migrate`, o banco contém três administradores padrão:
 
-Para experimentar o login localmente, o seeder cria o usuário `test@example.com` com senha `password`.
+| Nome | E-mail | Senha |
+| --- | --- | --- |
+| Gertrudes | teste@mail.com | Senha123 |
+| Marcelo | teste2@mail.com | Senha123 |
+| Emerson | teste3@mail.com | Senha123 |
