@@ -3,6 +3,7 @@
 namespace App\Modules\Room\Infra\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Room\Application\Errors\CapacityReductionBlocked;
 use App\Modules\Room\Application\Errors\DeactivationDecisionRequired;
 use App\Modules\Room\Application\Errors\RoomNotFound;
 use App\Modules\Room\Application\UseCases\UpdateRoom;
@@ -26,6 +27,10 @@ class UpdateRoomController extends Controller
             );
         } catch (RoomNotFound) {
             abort(404);
+        } catch (CapacityReductionBlocked $exception) {
+            throw ValidationException::withMessages([
+                'capacity' => $exception->getMessage(),
+            ]);
         } catch (DeactivationDecisionRequired $exception) {
             throw ValidationException::withMessages([
                 'scheduled_meetings_action' => 'Informe o que deseja fazer com as reuniões programadas.',
