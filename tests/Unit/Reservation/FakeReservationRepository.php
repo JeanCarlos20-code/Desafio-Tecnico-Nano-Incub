@@ -140,6 +140,23 @@ final class FakeReservationRepository implements ReservationRepository
         return $count;
     }
 
+    public function countActiveFutureExceedingCapacity(string $roomId, DateTimeImmutable $now, int $capacity): int
+    {
+        $count = 0;
+
+        foreach ($this->reservations as $reservation) {
+            if ($reservation->roomId === $roomId
+                && $reservation->cancelledAt === null
+                && $reservation->startsAt > $now
+                && $reservation->participants > $capacity
+            ) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public function countByRoomIds(array $ids): array
     {
         $counts = [];
