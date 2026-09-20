@@ -78,6 +78,8 @@ Contains:
 
 Controllers must be thin and only adapt HTTP input/output to application use cases.
 
+Administrator login uses Breeze `AuthenticatedSessionController` and `LoginRequest::authenticate()`.
+
 Form Requests validate HTTP input such as:
 
 - required fields;

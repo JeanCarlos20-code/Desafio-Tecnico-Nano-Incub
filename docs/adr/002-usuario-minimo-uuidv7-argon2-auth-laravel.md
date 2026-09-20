@@ -1,7 +1,7 @@
 # ADR-002: Usuário mínimo com UUID v7, soft delete e hash Argon nativo do Laravel
 
 - **Data**: 2026-09-16
-- **Status**: Aceito
+- **Status**: Aceito; o recorte “auth nativa sem kit” foi substituído pelo [ADR-007](007-adotar-laravel-breeze-para-o-login.md)
 - **Decisores**: Time do Painel Administrativo
 - **Tags**: architecture, security, identity, laravel
 
