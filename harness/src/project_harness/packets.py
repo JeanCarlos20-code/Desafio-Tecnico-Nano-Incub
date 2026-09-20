@@ -89,6 +89,8 @@ Use SPECIFY + TASKS. DESIGN não é obrigatório neste MVP; só use conceitos de
 
 Leia até o fim `docs/test/unit.md`, `docs/test/integration.md` e `docs/test/e2e.md` **antes** de preencher `harness.tests`. Eles são o contrato de fronteira (unit isolado sem HTTP/DB; integration = request Laravel + MySQL; e2e = browser seletivo). Classifique cada teste pontual nesses níveis **sem sobrepor** o mesmo cenário. Cada item deve dizer **o comportamento protegido**, não o comando que roda a suíte.
 
+Se todos os níveis de `harness.tests` estiverem vazios, preencha `tests_not_applicable_reason` com uma frase que comece com `sem testes para esse plano pois ele é apenas` e explique o porquê. Não invente cobertura vazia em unit/integration/e2e. Nível vazio em plano misto continua exigindo `tests_not_applicable.<nível>`.
+
 ## Artefatos em `.specs/` (inglês)
 
 Os arquivos da pasta da task (`context.md`, `spec.md`, `tasks.md`, `progress.md`, `validation.md`, `review/review-NN.md`) devem ser escritos em **inglês**, com estes headings. Não traduza identificadores de código. Texto fornecido pelo usuário pode permanecer no idioma original.

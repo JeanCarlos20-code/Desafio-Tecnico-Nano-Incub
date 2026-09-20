@@ -42,6 +42,50 @@ def write_valid(task: Path) -> None:
     )
 
 
+NO_NEW_TESTS_REASON = (
+    "sem testes para esse plano pois ele é apenas um ajuste de copy do orquestrador"
+)
+
+
+def write_all_empty_tests(
+    task: Path,
+    *,
+    reason: str | None = NO_NEW_TESTS_REASON,
+    include_gate: bool = True,
+) -> None:
+    (task / "context.md").write_text("# Task Context\n\nDocs-only orchestrator copy.\n", encoding="utf-8")
+    (task / "spec.md").write_text(
+        "# Specification\n\n## User Stories\n\nAs a reviewer I want an honest plan gate.\n\n"
+        "## Acceptance Criteria\n\n- AC-001 no invented coverage.\n",
+        encoding="utf-8",
+    )
+    reason_yaml = f'  tests_not_applicable_reason: "{reason}"\n' if reason else ""
+    gates = (
+        "  gates:\n"
+        "    - id: lint\n"
+        "      command: \"python3 -m compileall -q src\"\n"
+        "      required: true\n"
+        if include_gate
+        else "  gates: []\n"
+    )
+    (task / "tasks.md").write_text(
+        "---\n"
+        "harness:\n"
+        "  commit_message: \"chore(harness): adjust orchestrator copy\"\n"
+        "  tests:\n"
+        "    unit: []\n"
+        "    integration: []\n"
+        "    e2e: []\n"
+        f"{reason_yaml}"
+        f"{gates}"
+        "---\n\n"
+        "# Implementation Plan\n\n## Summary\n\nAdjust orchestrator copy only.\n\n"
+        "## Planned Tests\n\n### Unit\n\n### Integration\n\n### E2E\n\n"
+        "## Required Gates\n\nlint.\n",
+        encoding="utf-8",
+    )
+
+
 def test_templates_use_english_headings() -> None:
     assert "# Task Context" in TEMPLATES["context.md"]
     assert "## User Stories" in TEMPLATES["spec.md"]
@@ -183,3 +227,85 @@ def test_plan_requires_reason_when_a_level_has_no_tests(harness_source: Path, tm
     )
     with pytest.raises(HarnessError, match="tests_not_applicable.e2e"):
         service.validate_plan(task)
+
+
+def test_plan_barrier_summary_shows_single_no_new_tests_sentence(
+    harness_source: Path, tmp_path: Path
+) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_all_empty_tests(task)
+    text = service.plan_barrier_summary(task)
+    tests_section = text.split("## Testes pontuais", 1)[1].split("## Comandos após o Execute", 1)[0]
+    assert NO_NEW_TESTS_REASON in tests_section
+    assert "### Unit" not in tests_section
+    assert "### Integration" not in tests_section
+    assert "### E2E" not in tests_section
+    assert "- not applicable:" not in tests_section
+    assert "## Comandos após o Execute" in text
+
+
+def test_validate_plan_rejects_all_empty_tests_without_required_reason_prefix(
+    harness_source: Path, tmp_path: Path
+) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "empty-missing"
+    task.mkdir()
+    write_all_empty_tests(task, reason=None)
+    with pytest.raises(HarnessError, match="tests_not_applicable_reason"):
+        service.validate_plan(task)
+    other = tmp_path / "empty-wrong-prefix"
+    other.mkdir()
+    write_all_empty_tests(other, reason="no tests needed for this docs change")
+    with pytest.raises(HarnessError, match="sem testes para esse plano pois ele é apenas"):
+        service.validate_plan(other)
+
+
+def test_validate_plan_accepts_all_empty_tests_with_no_new_tests_reason(
+    harness_source: Path, tmp_path: Path
+) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_all_empty_tests(task)
+    plan = service.validate_plan(task)
+    assert plan.planned_tests.unit == ()
+    assert plan.planned_tests.integration == ()
+    assert plan.planned_tests.e2e == ()
+    assert plan.planned_tests.skipped == ()
+    assert plan.tests_not_applicable_reason == NO_NEW_TESTS_REASON
+
+
+def test_plan_barrier_summary_lists_three_levels_when_any_level_has_tests(
+    harness_source: Path, tmp_path: Path
+) -> None:
+    config = load_config(harness_source.parent)
+    service = ArtifactService(config)
+    task = tmp_path / "task"
+    task.mkdir()
+    write_valid(task)
+    tasks = (task / "tasks.md").read_text(encoding="utf-8")
+    (task / "tasks.md").write_text(
+        tasks.replace(
+            "    e2e:\n      - \"Administrator submits the login screen and reaches /reservations\"\n",
+            "    e2e: []\n"
+            "  tests_not_applicable:\n"
+            "    e2e: \"No browser flow changes.\"\n"
+            "  tests_not_applicable_reason: "
+            "\"sem testes para esse plano pois ele é apenas um ajuste misto\"\n",
+        ),
+        encoding="utf-8",
+    )
+    text = service.plan_barrier_summary(task)
+    assert "### Unit" in text
+    assert "### Integration" in text
+    assert "### E2E" in text
+    assert "LoginRequest rejects empty email" in text
+    assert "- not applicable: No browser flow changes." in text
+    assert NO_NEW_TESTS_REASON not in text.split("## Testes pontuais", 1)[1].split(
+        "## Comandos após o Execute", 1
+    )[0]

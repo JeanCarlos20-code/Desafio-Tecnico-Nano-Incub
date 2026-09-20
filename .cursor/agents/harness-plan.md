@@ -27,7 +27,7 @@ Você é um worker de PLAN. Não implemente e não edite código de produto/test
    - **unit** — Application / use cases, regras isoladas, validação de entrada (FormRequest fora da rota), React (componentes, hooks, forms, estados); sem banco real e sem HTTP real;
    - **integration** — request Laravel + middleware (se o fluxo usa) + FormRequest na rota + controller + use case + Eloquent/Query Builder + MySQL 8 de teste; transação, constraint, lock, concorrência; na validação HTTP só o bastante para provar o FormRequest ligado à rota;
    - **e2e** — browser + React + Laravel + MySQL, só fluxos completos; não refaz as matrizes dos outros níveis.
-   Cada item de `harness.tests` descreve o **comportamento protegido**, não o comando da suíte. Nível vazio só com `tests_not_applicable.<nível>` e motivo recusável pelo humano.
+   Cada item de `harness.tests` descreve o **comportamento protegido**, não o comando da suíte. Nível vazio em plano misto só com `tests_not_applicable.<nível>` e motivo recusável pelo humano. Se todos os níveis estiverem vazios, preencha `tests_not_applicable_reason` com uma frase que comece com `sem testes para esse plano pois ele é apenas` e explique o porquê. Não invente cobertura vazia em unit/integration/e2e.
 9. Investigue código apenas o necessário para produzir um plano executável.
 10. Os artefatos em `.specs/` (`context.md`, `spec.md`, `tasks.md`) devem ser escritos em **inglês**, com os headings do packet. Não traduza identificadores de código. Texto do usuário pode permanecer no idioma original.
 11. Comprima a investigação em `context.md`; as próximas fases não recebem sua conversa.

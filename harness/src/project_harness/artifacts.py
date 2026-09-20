@@ -132,6 +132,7 @@ REVIEW_FILE_RE = re.compile(r"^review-(\d{2,})\.md$")
 CHECKS_DIRNAME = "tests"
 CHECKS_FILE_RE = re.compile(r"^checks-(\d{2,})\.md$")
 TEST_LEVELS = ("unit", "integration", "e2e")
+NO_NEW_TESTS_PREFIX = "sem testes para esse plano pois ele é apenas"
 RUNNER_COMMAND_RE = re.compile(
     r"^(npm\s|npx\s|yarn\s|pnpm\s|php\s+artisan\s|vendor/bin/|pytest\b|"
     r"python\s+-m\s+pytest|composer\s)",
@@ -277,7 +278,7 @@ class ArtifactService:
             raise HarnessError(
                 "tasks.md must declare at least one gate or tests_not_applicable_reason."
             )
-        planned_tests = _parse_planned_tests(harness)
+        planned_tests = _parse_planned_tests(harness, no_tests_reason)
         commit_messages = _commit_messages(harness)
         if not commit_messages:
             raise HarnessError(
@@ -335,25 +336,29 @@ class ArtifactService:
             lines.extend(["### Goal", "", goal, ""])
         if len(lines) == 2:
             lines.extend(["See spec.md and tasks.md in the worktree.", ""])
-        lines.extend(
-            [
-                "## Testes pontuais",
-                "",
-                "O Execute deve criar estes testes, classificados por nível "
-                "(`docs/test/unit.md`, `docs/test/integration.md`, `docs/test/e2e.md`).",
-                "",
-            ]
-        )
-        titles = {"unit": "Unit", "integration": "Integration", "e2e": "E2E"}
-        for level in TEST_LEVELS:
-            lines.extend([f"### {titles[level]}", ""])
-            items = getattr(plan.planned_tests, level)
-            if items:
-                for item in items:
-                    lines.append(f"- {item}")
-            else:
-                lines.append(f"- not applicable: {skipped[level]}")
-            lines.append("")
+        all_empty = not any(getattr(plan.planned_tests, level) for level in TEST_LEVELS)
+        no_new_tests = all_empty and plan.tests_not_applicable_reason.startswith(NO_NEW_TESTS_PREFIX)
+        lines.extend(["## Testes pontuais", ""])
+        if no_new_tests:
+            lines.extend([plan.tests_not_applicable_reason, ""])
+        else:
+            lines.extend(
+                [
+                    "O Execute deve criar estes testes, classificados por nível "
+                    "(`docs/test/unit.md`, `docs/test/integration.md`, `docs/test/e2e.md`).",
+                    "",
+                ]
+            )
+            titles = {"unit": "Unit", "integration": "Integration", "e2e": "E2E"}
+            for level in TEST_LEVELS:
+                lines.extend([f"### {titles[level]}", ""])
+                items = getattr(plan.planned_tests, level)
+                if items:
+                    for item in items:
+                        lines.append(f"- {item}")
+                else:
+                    lines.append(f"- not applicable: {skipped[level]}")
+                lines.append("")
         lines.extend(
             [
                 "## Comandos após o Execute",
@@ -405,7 +410,7 @@ class ArtifactService:
         path.write_text(existing.rstrip() + "\n\n" + block, encoding="utf-8")
 
 
-def _parse_planned_tests(harness: JSONObject) -> PlannedTests:
+def _parse_planned_tests(harness: JSONObject, no_tests_reason: str = "") -> PlannedTests:
     raw = harness.get("tests")
     if not isinstance(raw, dict):
         raise HarnessError(
@@ -421,7 +426,6 @@ def _parse_planned_tests(harness: JSONObject) -> PlannedTests:
     elif skipped_raw is not None:
         raise HarnessError("tasks.md harness.tests_not_applicable must be a mapping of level to reason.")
     levels: dict[str, tuple[str, ...]] = {}
-    skipped: list[tuple[str, str]] = []
     for level in TEST_LEVELS:
         if level not in raw:
             raise HarnessError(f"tasks.md harness.tests must include '{level}'.")
@@ -432,14 +436,27 @@ def _parse_planned_tests(harness: JSONObject) -> PlannedTests:
                 f"tasks.md harness.tests.{level} already lists tests; "
                 f"do not also set tests_not_applicable.{level}."
             )
-        if not items:
-            if not reason:
-                raise HarnessError(
-                    f"tasks.md harness.tests.{level} must list punctual behaviors, "
-                    f"or tests_not_applicable.{level} must explain the skip."
-                )
-            skipped.append((level, reason))
         levels[level] = items
+    all_empty = not any(levels[level] for level in TEST_LEVELS)
+    if all_empty:
+        if not no_tests_reason.startswith(NO_NEW_TESTS_PREFIX):
+            raise HarnessError(
+                "tasks.md harness.tests is empty at every level; "
+                "tests_not_applicable_reason must start with "
+                f"'{NO_NEW_TESTS_PREFIX}'."
+            )
+        return PlannedTests(unit=(), integration=(), e2e=(), skipped=())
+    skipped: list[tuple[str, str]] = []
+    for level in TEST_LEVELS:
+        if levels[level]:
+            continue
+        reason = skipped_map.get(level, "")
+        if not reason:
+            raise HarnessError(
+                f"tasks.md harness.tests.{level} must list punctual behaviors, "
+                f"or tests_not_applicable.{level} must explain the skip."
+            )
+        skipped.append((level, reason))
     return PlannedTests(
         unit=levels["unit"],
         integration=levels["integration"],

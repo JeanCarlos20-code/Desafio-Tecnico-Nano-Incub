@@ -2,12 +2,16 @@
 
 ```text
 START
+  (no `task start` while a `kind=human` action is open: classify on that gate;
+   wait on addition/replacement; loose report does not open a task)
   ↓
 PLAN worker (fresh context)
   ↓
 validate context/spec/tasks
   ↓
 HITL #1: plan approval
+  (orchestrator pastes the CLI summary in full and asks if the human approves the plan;
+   no-new-tests → one sentence under Testes pontuais, not empty per-level lists)
   ├─ revise → PLAN
   ├─ cancel → CANCELED
   └─ approve
@@ -30,6 +34,7 @@ REVIEW REJECTED no limite → HITL repair_limit
 REVIEW APPROVED e checks verdes
        ↓
 HITL #2: commit approval
+  (do not `task start` while this human gate is open; classify first; wait on addition/replacement; loose report does not open a task)
   ├─ local/simple change (layout, planned-screen popup, test for existing ACs) → revise-code immediately, no suggestion → REPAIR → CHECKS → REVIEW só se checks verdes
   ├─ addition of scope → suggest merge then start a new task
   │    accept: approve-commit (commit+merge+cleanup) then `harness task start` with the extra request
