@@ -137,6 +137,8 @@ def test_plan_packet_includes_compact_stack_summary(git_repo: Path) -> None:
     assert "sem sobrepor" in text
     assert "harness.tests" in text
     assert "harness.gates" in text
+    assert "sem testes para esse plano pois ele é apenas" in text
+    assert "Não invente cobertura vazia" in text
 
 
 def test_repair_packet_points_at_latest_review_verdict_and_result(git_repo: Path) -> None:

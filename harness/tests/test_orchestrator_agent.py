@@ -3,10 +3,71 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _harness_md() -> str:
+    return (Path(__file__).resolve().parents[1] / "agents" / "harness.md").read_text(encoding="utf-8")
+
+
+def _inicio_section() -> str:
+    _, rest = _harness_md().split("## Início", 1)
+    return rest.split("## Como tratar actions", 1)[0]
+
+
+def _plan_gate_section() -> str:
+    _, rest = _harness_md().split("### `kind=human`, `gate=plan`", 1)
+    return rest.split("### `kind=human`, `gate=commit`", 1)[0]
+
+
 def _commit_gate_section() -> str:
-    text = (Path(__file__).resolve().parents[1] / "agents" / "harness.md").read_text(encoding="utf-8")
-    _, rest = text.split("### `kind=human`, `gate=commit`", 1)
+    _, rest = _harness_md().split("### `kind=human`, `gate=commit`", 1)
     return rest.split("### `gate=", 1)[0]
+
+
+def test_planner_instructs_no_new_tests_sentence() -> None:
+    text = (Path(__file__).resolve().parents[1] / "agents" / "plan.md").read_text(encoding="utf-8")
+    assert "sem testes para esse plano pois ele é apenas" in text
+    assert "Não invente cobertura vazia" in text
+
+
+def test_orchestrator_plan_gate_pastes_summary_and_asks_approval() -> None:
+    section = _plan_gate_section()
+    lower = section.lower()
+    assert "action.summary" in section
+    assert "íntegra" in lower
+    assert "não reescreva" in lower
+    assert "não corte" in lower
+    assert "## Plano" in section
+    assert "## Testes pontuais" in section
+    assert "## Comandos após o Execute" in section
+    assert "aprova o plano" in lower
+    assert "não implemente" in lower
+    assert "harness.commits" in section
+
+
+def test_orchestrator_inicio_checks_open_human_gate_before_start() -> None:
+    section = _inicio_section()
+    lower = section.lower()
+    assert "kind=human" in section
+    assert ".git/harness/actions" in section
+    assert "harness task action" in section
+    assert "não" in lower
+    assert "harness task start" in section
+    assert "classifique" in lower
+    assert "relato solto" in lower
+
+
+def test_orchestrator_keeps_wait_revise_and_no_start_on_loose_report() -> None:
+    inicio = _inicio_section().lower()
+    commit = _commit_gate_section()
+    addition = commit.split("**Adição de escopo**", 1)[1].split("**Substituição de escopo**", 1)[0]
+    replacement = commit.split("**Substituição de escopo**", 1)[1].split("**Recusa**", 1)[0]
+    local = commit.split("**Ajuste local**", 1)[1].split("**Adição de escopo**", 1)[0]
+    assert "espere" in inicio
+    assert "espere" in addition.lower()
+    assert "espere" in replacement.lower()
+    assert "harness task revise-code" in local
+    assert "imediatamente" in local.lower()
+    assert "relato solto" in inicio
+    assert "não chame `harness task start`" in inicio or "não chame `task start`" in inicio
 
 
 def test_orchestrator_suggests_only_when_redo_or_add_another_task() -> None:
