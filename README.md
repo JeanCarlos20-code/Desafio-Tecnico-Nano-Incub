@@ -92,9 +92,51 @@ Abra `http://127.0.0.1:8000` e entre com uma das contas da tabela acima.
 
 Criei três tabelas principais: `users`, `rooms` e `reservations`.
 
+**`users`**
+
+| Coluna           | Tipo MySQL               | Observação     |
+| ---------------- | ------------------------ | -------------- |
+| `id`             | `char(36)`               | PK, UUID v7    |
+| `name`           | `varchar(255)`           |                |
+| `email`          | `varchar(255)`           | unique         |
+| `password`       | `varchar(255)`           | hash Argon2    |
+| `remember_token` | `varchar(100)`, nullable | sessão Laravel |
+| `created_at`     | `timestamp`, nullable    |                |
+| `updated_at`     | `timestamp`, nullable    |                |
+| `deleted_at`     | `timestamp`, nullable    | soft delete    |
+
+**`rooms`**
+
+| Coluna       | Tipo MySQL                | Observação        |
+| ------------ | ------------------------- | ----------------- |
+| `id`         | `bigint unsigned`         | PK, autoincrement |
+| `name`       | `varchar(255)`            |                   |
+| `capacity`   | `int unsigned`            |                   |
+| `is_active`  | `tinyint(1)`, default `1` | situação da sala  |
+| `created_at` | `timestamp`, nullable     |                   |
+| `updated_at` | `timestamp`, nullable     |                   |
+| `deleted_at` | `timestamp`, nullable     | soft delete       |
+
+**`reservations`**
+
+| Coluna         | Tipo MySQL            | Observação                 |
+| -------------- | --------------------- | -------------------------- |
+| `id`           | `bigint unsigned`     | PK, autoincrement          |
+| `room_id`      | `bigint unsigned`     | FK para `rooms.id`         |
+| `responsible`  | `varchar(255)`        | texto, sem FK para `users` |
+| `title`        | `varchar(255)`        |                            |
+| `starts_at`    | `datetime`            |                            |
+| `ends_at`      | `datetime`            |                            |
+| `participants` | `int unsigned`        |                            |
+| `cancelled_at` | `datetime`, nullable  | `null` = ativa             |
+| `created_at`   | `timestamp`, nullable |                            |
+| `updated_at`   | `timestamp`, nullable |                            |
+
 Para `users`, optei por UUIDv7, já que o desafio não definia o tipo de ID. Escolhi por ser um identificador não sequencial para exposição externa e ainda manter ordenação temporal, pois combina timestamp com aleatoriedade. Para senha, usei Argon2id por ser um algoritmo memory-hard, aumentando o custo de ataques em massa com GPU/ASIC por exigir processamento e uso significativo de memória por tentativa.
 
 Já `rooms` e `reservations` usam IDs numéricos incrementais, por serem mais simples e suficientes para o escopo do projeto. Em um sistema distribuído ou com necessidade maior de IDs externos, UUIDv7 poderia ser considerado também.
+
+Em reservations, decidi manter o responsável como texto livre. O desafio não deixa claro se o responsável pela reunião precisa necessariamente ser um usuário cadastrado no sistema. Como o painel administrativo também pode ser usado para registrar reuniões lideradas por pessoas externas ao sistema, preferi não criar um vínculo obrigatório com users.
 
 Na arquitetura, optei por uma abordagem hexagonal para isolar as regras de negócio do Laravel e da infraestrutura. O domínio/application fica responsável pelas regras, enquanto a infraestrutura integra Laravel, Eloquent/MySQL, autenticação, Inertia e demais detalhes externos.
 
