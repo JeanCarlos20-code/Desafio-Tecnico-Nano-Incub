@@ -3,7 +3,6 @@
 namespace App\Modules\Room\Infra\Database\Models;
 
 use Database\Factories\RoomFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Room extends Model
 {
     /** @use HasFactory<RoomFactory> */
-    use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     /**
      * @var list<string>
