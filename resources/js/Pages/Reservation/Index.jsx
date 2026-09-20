@@ -74,12 +74,12 @@ export default function Index({
             onError: () => {
                 setCancelError('Não foi possível cancelar a reserva. Tente novamente.');
             },
-            onHttpException: () => {
+            onInvalid: () => {
                 setCancelError('Não foi possível cancelar a reserva. Tente novamente.');
 
                 return false;
             },
-            onNetworkError: () => {
+            onException: () => {
                 setCancelError('Não foi possível cancelar a reserva. Tente novamente.');
 
                 return false;
@@ -166,12 +166,12 @@ export default function Index({
             },
             {
                 onError: () => setClientFailed(true),
-                onHttpException: () => {
+                onInvalid: () => {
                     setClientFailed(true);
 
                     return false;
                 },
-                onNetworkError: () => {
+                onException: () => {
                     setClientFailed(true);
 
                     return false;

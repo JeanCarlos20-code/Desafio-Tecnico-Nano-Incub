@@ -41,8 +41,8 @@ export default function Login() {
                     document.getElementById(first)?.focus();
                 }
             },
-            onHttpException: showGeneralFailure,
-            onNetworkError: showGeneralFailure,
+            onInvalid: showGeneralFailure,
+            onException: showGeneralFailure,
         });
     }
 

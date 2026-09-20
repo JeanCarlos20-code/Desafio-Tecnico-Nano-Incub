@@ -64,12 +64,12 @@ export default function Index({
         setFailed(false);
         visitIndex(statusQuery(filters.status), {
             onError: () => setFailed(true),
-            onHttpException: () => {
+            onInvalid: () => {
                 setFailed(true);
 
                 return false;
             },
-            onNetworkError: () => {
+            onException: () => {
                 setFailed(true);
 
                 return false;
