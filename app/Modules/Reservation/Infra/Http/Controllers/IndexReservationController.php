@@ -9,7 +9,6 @@ use App\Modules\Reservation\Domain\Entities\Reservation;
 use App\Modules\Reservation\Domain\OccupancyRoomCatalog;
 use App\Modules\Reservation\Infra\Http\Requests\IndexReservationRequest;
 use DateTimeZone;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,9 +25,10 @@ class IndexReservationController extends Controller
         $endsOn = $request->validated('ends_on');
         $roomId = $request->validated('room_id');
         $roomId = $roomId !== null ? (string) $roomId : null;
-        $page = max(1, (int) $request->query('page', 1));
+        $page = (int) ($request->validated('page') ?? 1);
+        $limit = (int) ($request->validated('limit') ?? 20);
 
-        $result = $listReservations->execute($page, 15, $roomId, $period, $startsOn, $endsOn, $timezone);
+        $result = $listReservations->execute($page, $limit, $roomId, $period, $startsOn, $endsOn, $timezone);
         $tz = new DateTimeZone($timezone);
         $timeFormat = $this->isSingleDayWindow($period, $startsOn, $endsOn) ? 'H:i' : 'd/m/Y H:i';
 
@@ -37,19 +37,13 @@ class IndexReservationController extends Controller
             $result['items'],
         );
 
-        $paginator = (new LengthAwarePaginator(
-            $items,
-            $result['total'],
-            15,
-            $page,
-            [
-                'path' => $request->url(),
-                'pageName' => 'page',
-            ],
-        ))->withQueryString();
-
         return Inertia::render('Reservation/Index', [
-            'reservations' => $paginator->toArray(),
+            'reservations' => [
+                'data' => $items,
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $result['total'],
+            ],
             'filters' => [
                 'room_id' => $roomId,
                 'period' => $period,

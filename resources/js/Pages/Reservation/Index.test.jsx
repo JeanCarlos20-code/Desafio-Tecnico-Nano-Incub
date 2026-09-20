@@ -44,10 +44,9 @@ const sampleReservations = {
             status_label: 'Ativa',
         },
     ],
+    page: 1,
+    limit: 20,
     total: 2,
-    current_page: 1,
-    last_page: 1,
-    per_page: 15,
 };
 
 const defaultFilters = { room_id: '', period: 'all', starts_on: '', ends_on: '' };
@@ -165,7 +164,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'today', room_id: 'room-1', page: 1 },
+            { period: 'today', room_id: 'room-1', page: 1, limit: 20 },
             expect.any(Object),
         );
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('starts_on');
@@ -207,7 +206,7 @@ describe('Reservation/Index', () => {
         rerender(<Index {...page} filters={{ ...defaultFilters, period: 'all' }} />);
         expect(screen.getByLabelText('Data inicial')).toHaveValue('');
         expect(screen.getByLabelText('Data final')).toHaveValue('');
-        expect(router.get.mock.calls.at(-1)[1]).toEqual({ period: 'all', page: 1 });
+        expect(router.get.mock.calls.at(-1)[1]).toEqual({ period: 'all', page: 1, limit: 20 });
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('starts_on');
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('ends_on');
     });
@@ -224,7 +223,7 @@ describe('Reservation/Index', () => {
         const user = userEvent.setup();
 
         renderIndex({
-            reservations: { data: [], total: 0, last_page: 1 },
+            reservations: { data: [], page: 1, limit: 20, total: 0 },
             filters: {
                 room_id: '',
                 period: 'all',
@@ -242,7 +241,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all', page: 1 },
+            { period: 'all', page: 1, limit: 20 },
             expect.any(Object),
         );
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('starts_on');
@@ -284,6 +283,7 @@ describe('Reservation/Index', () => {
                 starts_on: '2026-09-22',
                 ends_on: '2026-09-23',
                 page: 1,
+                limit: 20,
             },
             expect.any(Object),
         );
@@ -300,6 +300,7 @@ describe('Reservation/Index', () => {
                 starts_on: '2026-09-22',
                 ends_on: '2026-09-23',
                 page: 1,
+                limit: 20,
             },
             expect.any(Object),
         );
@@ -317,6 +318,7 @@ describe('Reservation/Index', () => {
                 starts_on: '2026-09-21',
                 ends_on: '2026-09-23',
                 page: 1,
+                limit: 20,
             },
             expect.any(Object),
         );
@@ -350,7 +352,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all', page: 1 },
+            { period: 'all', page: 1, limit: 20 },
             expect.any(Object),
         );
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('room_id');
@@ -475,7 +477,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all', page: 1 },
+            { period: 'all', page: 1, limit: 20 },
             expect.any(Object),
         );
 
@@ -525,6 +527,60 @@ describe('Reservation/Index', () => {
         expect(screen.getByText('Não foi possível cancelar a reserva. Tente novamente.')).toHaveAttribute(
             'role',
             'alert',
+        );
+    });
+
+    it('shows Próxima including period, range, room_id, page, and limit', () => {
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                page: 1,
+                limit: 2,
+                total: 3,
+            },
+            filters: {
+                room_id: 'room-1',
+                period: 'today',
+                starts_on: '2026-09-21',
+                ends_on: '2026-09-21',
+            },
+        });
+
+        const href = screen.getByRole('link', { name: 'Próxima' }).getAttribute('href');
+
+        expect(href).toContain('period=today');
+        expect(href).toContain('starts_on=2026-09-21');
+        expect(href).toContain('ends_on=2026-09-21');
+        expect(href).toContain('room_id=room-1');
+        expect(href).toContain('page=2');
+        expect(href).toContain('limit=2');
+        expect(href).toMatch(/^\/reservations\?/);
+    });
+
+    it('visits page 1 and the current limit when a filter changes', async () => {
+        const user = userEvent.setup();
+
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                page: 2,
+                limit: 2,
+                total: 3,
+            },
+            filters: {
+                room_id: 'room-1',
+                period: 'all',
+                starts_on: '',
+                ends_on: '',
+            },
+        });
+
+        await user.click(screen.getByRole('radio', { name: 'Hoje' }));
+
+        expect(router.get).toHaveBeenCalledWith(
+            '/reservations',
+            { period: 'today', room_id: 'room-1', page: 1, limit: 2 },
+            expect.any(Object),
         );
     });
 });

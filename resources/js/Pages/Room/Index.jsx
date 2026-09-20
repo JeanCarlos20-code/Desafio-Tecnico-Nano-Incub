@@ -11,6 +11,10 @@ export default function Index({
     loading = false,
 }) {
     const data = rooms?.data ?? [];
+    const page = rooms?.page ?? 1;
+    const limit = rooms?.limit ?? 20;
+    const total = rooms?.total ?? 0;
+    const lastPage = limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1;
     const [failed, setFailed] = useState(Boolean(loadError));
     const [pending, setPending] = useState(null);
     const form = useForm({});
@@ -74,7 +78,7 @@ export default function Index({
     }
 
     function applyStatus(status) {
-        visitIndex({ status, page: 1 });
+        visitIndex({ ...statusQuery(status), page: 1, limit });
     }
 
     const empty = !failed && !loading && data.length === 0 && !hasAny;
@@ -225,15 +229,21 @@ export default function Index({
                 </>
             ) : null}
 
-            {rooms?.last_page > 1 ? (
+            {total > limit ? (
                 <nav className="mt-6 flex gap-4" aria-label="Paginação">
-                    {rooms.prev_page_url ? (
-                        <Link href={rooms.prev_page_url} className="text-sm font-medium text-blue-700">
+                    {page > 1 ? (
+                        <Link
+                            href={listingHref({ status: filters.status, page: page - 1, limit })}
+                            className="text-sm font-medium text-blue-700"
+                        >
                             Anterior
                         </Link>
                     ) : null}
-                    {rooms.next_page_url ? (
-                        <Link href={rooms.next_page_url} className="text-sm font-medium text-blue-700">
+                    {page < lastPage ? (
+                        <Link
+                            href={listingHref({ status: filters.status, page: page + 1, limit })}
+                            className="text-sm font-medium text-blue-700"
+                        >
                             Próxima
                         </Link>
                     ) : null}
@@ -291,6 +301,19 @@ export default function Index({
 
 function statusQuery(status) {
     return status && status !== 'all' ? { status } : {};
+}
+
+function listingHref({ status, page, limit }) {
+    const params = new URLSearchParams();
+
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+
+    if (status && status !== 'all') {
+        params.set('status', status);
+    }
+
+    return `/rooms?${params.toString()}`;
 }
 
 function RowActions({ room, onDelete }) {

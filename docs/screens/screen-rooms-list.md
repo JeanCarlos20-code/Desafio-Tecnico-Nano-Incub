@@ -106,7 +106,7 @@ Example URL:
 Requirements:
 
 - store the filter in the URL so the view can be refreshed and shared;
-- reset pagination to the first page when the filter changes;
+- reset pagination to `page=1` when the filter changes and keep the current `limit`;
 - use server-side filtering as the authoritative implementation;
 - keep the selected value after navigation or validation failures;
 - label the control explicitly (`Status`).
@@ -225,7 +225,7 @@ The challenge does not define a mandatory room ordering. Use a deterministic def
 
 The selected rule must remain consistent between requests.
 
-If the number of rooms exceeds the configured page size, display server-driven pagination below the table. Pagination links must preserve the current query parameters.
+If `total` is greater than `limit`, display server-driven pagination below the table. Query params are `page` (default 1, min 1) and `limit` (default 20, min 1, max 100). The Inertia `rooms` prop is only `{ data, page, limit, total }`. Anterior/Próxima are built from that envelope plus the current `status` filter. See [ADR-010](../adr/010-envelope-simples-de-paginacao-page-e-limit.md).
 
 ## Page behavior
 

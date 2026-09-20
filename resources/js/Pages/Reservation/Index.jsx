@@ -19,6 +19,10 @@ export default function Index({
     loading = false,
 }) {
     const data = reservations?.data ?? [];
+    const page = reservations?.page ?? 1;
+    const limit = reservations?.limit ?? 20;
+    const total = reservations?.total ?? 0;
+    const lastPage = limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1;
     const [clientFailed, setClientFailed] = useState(false);
     const failed = Boolean(loadError) || clientFailed;
     const [pending, setPending] = useState(null);
@@ -94,6 +98,7 @@ export default function Index({
         const query = {
             period,
             page: 1,
+            limit,
         };
 
         const roomId = next.room_id === undefined ? filters.room_id : next.room_id;
@@ -147,7 +152,7 @@ export default function Index({
     function clearFilters() {
         setPendingPeriod('all');
         setDraft(null);
-        visitIndex({ period: 'all', page: 1 });
+        visitIndex({ period: 'all', page: 1, limit });
     }
 
     function retry() {
@@ -405,15 +410,21 @@ export default function Index({
                 </>
             ) : null}
 
-            {reservations?.last_page > 1 ? (
+            {total > limit ? (
                 <nav className="mt-6 flex gap-4" aria-label="Paginação">
-                    {reservations.prev_page_url ? (
-                        <Link href={reservations.prev_page_url} className="text-sm font-medium text-blue-700">
+                    {page > 1 ? (
+                        <Link
+                            href={listingHref({ filters, page: page - 1, limit })}
+                            className="text-sm font-medium text-blue-700"
+                        >
                             Anterior
                         </Link>
                     ) : null}
-                    {reservations.next_page_url ? (
-                        <Link href={reservations.next_page_url} className="text-sm font-medium text-blue-700">
+                    {page < lastPage ? (
+                        <Link
+                            href={listingHref({ filters, page: page + 1, limit })}
+                            className="text-sm font-medium text-blue-700"
+                        >
                             Próxima
                         </Link>
                     ) : null}
@@ -468,6 +479,31 @@ export default function Index({
             ) : null}
         </AppLayout>
     );
+}
+
+function listingHref({ filters, page, limit }) {
+    const params = new URLSearchParams();
+
+    if (filters.period) {
+        params.set('period', filters.period);
+    }
+
+    if (filters.room_id) {
+        params.set('room_id', String(filters.room_id));
+    }
+
+    if (filters.starts_on) {
+        params.set('starts_on', filters.starts_on);
+    }
+
+    if (filters.ends_on) {
+        params.set('ends_on', filters.ends_on);
+    }
+
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+
+    return `/reservations?${params.toString()}`;
 }
 
 function formatYmd(date) {

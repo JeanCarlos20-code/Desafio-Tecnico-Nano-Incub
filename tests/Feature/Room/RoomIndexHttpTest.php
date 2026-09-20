@@ -57,7 +57,14 @@ class RoomIndexHttpTest extends TestCase
                 ->where('rooms.data.1.id', (string) $ordered[1]->id)
                 ->where('rooms.data.1.status', $ordered[1]->is_active ? 'Ativa' : 'Inativa')
                 ->where('rooms.total', 5)
-                ->where('rooms.per_page', 15)
+                ->where('rooms.page', 1)
+                ->where('rooms.limit', 20)
+                ->missing('rooms.per_page')
+                ->missing('rooms.current_page')
+                ->missing('rooms.last_page')
+                ->missing('rooms.next_page_url')
+                ->missing('rooms.prev_page_url')
+                ->missing('rooms.links')
                 ->where('filters.status', 'all')
                 ->where('hasAny', true)
                 ->where('rooms.data.0.has_reservations', $firstHasReservations)
@@ -117,26 +124,70 @@ class RoomIndexHttpTest extends TestCase
             ->assertSessionHasErrors(['status']);
     }
 
-    public function test_index_paginates_by_15_and_keeps_query_parameters_on_links(): void
+    public function test_index_defaults_to_page_one_limit_twenty_without_paginator_keys(): void
     {
         $user = UserModel::factory()->create();
-        Room::factory()->count(16)->create();
+        Room::factory()->count(18)->create();
+        $ordered = Room::query()->orderBy('id')->get();
+        $this->assertGreaterThan(20, $ordered->count());
 
         $this->actingAs($user)
-            ->get('/rooms?foo=bar')
+            ->get(route('rooms.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Room/Index')
-                ->has('rooms.data', 15)
-                ->where('rooms.total', 19)
-                ->where('rooms.per_page', 15)
-                ->where('rooms.current_page', 1)
-                ->where('rooms.next_page_url', function (?string $url): bool {
-                    return is_string($url)
-                        && str_contains($url, 'foo=bar')
-                        && str_contains($url, 'page=2');
+                ->has('rooms.data', 20)
+                ->where('rooms.page', 1)
+                ->where('rooms.limit', 20)
+                ->where('rooms.total', $ordered->count())
+                ->where('rooms.data.0.id', (string) $ordered[0]->id)
+                ->missing('rooms.per_page')
+                ->missing('rooms.current_page')
+                ->missing('rooms.last_page')
+                ->missing('rooms.next_page_url')
+                ->missing('rooms.prev_page_url')
+                ->missing('rooms.links')
+            );
+    }
+
+    public function test_index_returns_the_second_slice_for_page_two_and_limit_ten(): void
+    {
+        $user = UserModel::factory()->create();
+        Room::factory()->count(18)->create();
+        $ordered = Room::query()->orderBy('id')->get();
+        $secondSlice = $ordered->slice(10, 10)->values();
+
+        $this->actingAs($user)
+            ->get('/rooms?page=2&limit=10')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Room/Index')
+                ->where('rooms.page', 2)
+                ->where('rooms.limit', 10)
+                ->where('rooms.total', $ordered->count())
+                ->has('rooms.data', $secondSlice->count())
+                ->where('rooms.data.0.id', (string) $secondSlice[0]->id)
+                ->where('rooms.data', function (Collection $rows) use ($secondSlice): bool {
+                    return $rows->pluck('id')->all() === $secondSlice->pluck('id')->map(fn ($id) => (string) $id)->all();
                 })
             );
+    }
+
+    public function test_index_rejects_limit_zero_and_does_not_change_rooms(): void
+    {
+        $user = UserModel::factory()->create();
+        $before = Room::query()->orderBy('id')->get(['id', 'name', 'capacity', 'is_active'])->toArray();
+
+        $this->actingAs($user)
+            ->from('/rooms')
+            ->get('/rooms?limit=0')
+            ->assertRedirect()
+            ->assertSessionHasErrors(['limit' => 'Informe um limite válido.']);
+
+        $this->assertSame(
+            $before,
+            Room::query()->orderBy('id')->get(['id', 'name', 'capacity', 'is_active'])->toArray(),
+        );
     }
 
     public function test_index_shares_authenticated_administrator_name_and_does_not_share_a_password(): void

@@ -9,7 +9,6 @@ use App\Modules\Room\Domain\Entities\Room;
 use App\Modules\Room\Infra\Http\Requests\IndexRoomRequest;
 use DateTimeImmutable;
 use DateTimeZone;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,9 +16,10 @@ class IndexRoomController extends Controller
 {
     public function __invoke(IndexRoomRequest $request, ListRooms $listRooms, ReservationRepository $reservations): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
+        $page = (int) ($request->validated('page') ?? 1);
+        $limit = (int) ($request->validated('limit') ?? 20);
         $status = $request->validated('status') ?? 'all';
-        $result = $listRooms->execute($page, 15, $status);
+        $result = $listRooms->execute($page, $limit, $status);
         $counts = $reservations->countByRoomIds(array_map(
             fn (Room $room): string => $room->id,
             $result['items'],
@@ -30,19 +30,13 @@ class IndexRoomController extends Controller
             $result['items'],
         );
 
-        $paginator = (new LengthAwarePaginator(
-            $items,
-            $result['total'],
-            15,
-            $page,
-            [
-                'path' => $request->url(),
-                'pageName' => 'page',
-            ],
-        ))->withQueryString();
-
         return Inertia::render('Room/Index', [
-            'rooms' => $paginator->toArray(),
+            'rooms' => [
+                'data' => $items,
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $result['total'],
+            ],
             'filters' => [
                 'status' => $status,
             ],

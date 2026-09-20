@@ -36,10 +36,9 @@ const sampleRooms = {
             has_reservations: false,
         },
     ],
+    page: 1,
+    limit: 20,
     total: 2,
-    current_page: 1,
-    last_page: 1,
-    per_page: 15,
 };
 
 function createForm(overrides = {}) {
@@ -194,7 +193,7 @@ describe('Room/Index', () => {
         expect(screen.getByLabelText('Status')).toHaveValue('all');
         await user.selectOptions(screen.getByLabelText('Status'), 'inactive');
 
-        expect(router.get).toHaveBeenCalledWith('/rooms', { status: 'inactive', page: 1 }, {});
+        expect(router.get).toHaveBeenCalledWith('/rooms', { status: 'inactive', page: 1, limit: 20 }, {});
 
         await user.click(screen.getAllByRole('button', { name: 'Excluir Sala Azul' })[0]);
 
@@ -315,42 +314,62 @@ describe('Room/Index', () => {
         expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     });
 
-    it('shows Previous on the last page so the administrator can go back', () => {
+    it('shows Próxima from page, limit, and total and keeps the current status filter', () => {
         render(
             <Index
                 rooms={{
                     ...sampleRooms,
-                    current_page: 2,
-                    last_page: 2,
-                    prev_page_url: 'http://localhost/rooms?foo=bar&page=1',
-                    next_page_url: null,
+                    page: 1,
+                    limit: 2,
+                    total: 3,
                 }}
-            />,
-        );
-
-        const previous = screen.getByRole('link', { name: 'Anterior' });
-        expect(previous).toHaveAttribute('href', 'http://localhost/rooms?foo=bar&page=1');
-        expect(screen.queryByRole('link', { name: 'Próxima' })).not.toBeInTheDocument();
-    });
-
-    it('shows Next on the first page when more than one page exists', () => {
-        render(
-            <Index
-                rooms={{
-                    ...sampleRooms,
-                    current_page: 1,
-                    last_page: 2,
-                    prev_page_url: null,
-                    next_page_url: 'http://localhost/rooms?foo=bar&page=2',
-                }}
+                filters={{ status: 'inactive' }}
             />,
         );
 
         expect(screen.queryByRole('link', { name: 'Anterior' })).not.toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Próxima' })).toHaveAttribute(
             'href',
-            'http://localhost/rooms?foo=bar&page=2',
+            '/rooms?page=2&limit=2&status=inactive',
         );
+    });
+
+    it('shows Anterior on the last page and hides Próxima', () => {
+        render(
+            <Index
+                rooms={{
+                    ...sampleRooms,
+                    page: 2,
+                    limit: 2,
+                    total: 3,
+                }}
+                filters={{ status: 'all' }}
+            />,
+        );
+
+        expect(screen.getByRole('link', { name: 'Anterior' })).toHaveAttribute('href', '/rooms?page=1&limit=2');
+        expect(screen.queryByRole('link', { name: 'Próxima' })).not.toBeInTheDocument();
+    });
+
+    it('visits page 1 and the current limit when the status filter changes', async () => {
+        const user = userEvent.setup();
+
+        render(
+            <Index
+                rooms={{
+                    ...sampleRooms,
+                    page: 2,
+                    limit: 2,
+                    total: 3,
+                }}
+                filters={{ status: 'all' }}
+                hasAny
+            />,
+        );
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'inactive');
+
+        expect(router.get).toHaveBeenCalledWith('/rooms', { status: 'inactive', page: 1, limit: 2 }, {});
     });
 
     it('shows the load-failure copy with retry', async () => {

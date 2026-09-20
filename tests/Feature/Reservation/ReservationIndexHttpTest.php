@@ -55,7 +55,15 @@ class ReservationIndexHttpTest extends TestCase
                 ->where('filters.starts_on', null)
                 ->where('filters.ends_on', null)
                 ->where('filters.room_id', null)
-                ->where('reservations.per_page', 15)
+                ->where('reservations.page', 1)
+                ->where('reservations.limit', 20)
+                ->where('reservations.total', 6)
+                ->missing('reservations.per_page')
+                ->missing('reservations.current_page')
+                ->missing('reservations.last_page')
+                ->missing('reservations.next_page_url')
+                ->missing('reservations.prev_page_url')
+                ->missing('reservations.links')
                 ->has('reservations.data', 6)
                 ->where('reservations.data', function (Collection $rows) use ($earlier, $later, $tomorrow): bool {
                     $byId = $rows->keyBy('id');
@@ -184,7 +192,7 @@ class ReservationIndexHttpTest extends TestCase
             );
     }
 
-    public function test_index_pagination_links_keep_period_range_and_room_id(): void
+    public function test_index_pages_the_filtered_set_with_page_and_limit_and_omits_paginator_urls(): void
     {
         $user = UserModel::factory()->create();
         $room = Room::factory()->create();
@@ -195,26 +203,35 @@ class ReservationIndexHttpTest extends TestCase
             'ends_at' => '2026-09-21 09:30:00',
         ]);
 
-        $query = 'period=today&starts_on=2026-09-21&ends_on=2026-09-21&room_id='.$room->id;
+        $filtered = Reservation::query()
+            ->where('room_id', $room->id)
+            ->whereNull('cancelled_at')
+            ->where('starts_at', '>=', '2026-09-21 00:00:00')
+            ->where('starts_at', '<', '2026-09-22 00:00:00')
+            ->orderBy('starts_at')
+            ->orderBy('id')
+            ->get();
+        $secondSlice = $filtered->slice(10, 10)->values();
+
+        $query = 'period=today&starts_on=2026-09-21&ends_on=2026-09-21&room_id='.$room->id.'&page=2&limit=10';
 
         $this->actingAs($user)
-            ->get('/reservations?'.$query.'&page=2')
+            ->get('/reservations?'.$query)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.period', 'today')
                 ->where('filters.starts_on', '2026-09-21')
                 ->where('filters.ends_on', '2026-09-21')
                 ->where('filters.room_id', (string) $room->id)
-                ->where('reservations.per_page', 15)
-                ->where('reservations.current_page', 2)
-                ->has('reservations.data', 1)
-                ->where('reservations.prev_page_url', function (?string $url) use ($room): bool {
-                    return is_string($url)
-                        && str_contains($url, 'period=today')
-                        && str_contains($url, 'starts_on=2026-09-21')
-                        && str_contains($url, 'ends_on=2026-09-21')
-                        && str_contains($url, 'room_id='.$room->id);
-                })
+                ->where('reservations.page', 2)
+                ->where('reservations.limit', 10)
+                ->where('reservations.total', $filtered->count())
+                ->has('reservations.data', $secondSlice->count())
+                ->where('reservations.data.0.id', (string) $secondSlice[0]->id)
+                ->missing('reservations.prev_page_url')
+                ->missing('reservations.next_page_url')
+                ->missing('reservations.per_page')
+                ->missing('reservations.links')
             );
     }
 
