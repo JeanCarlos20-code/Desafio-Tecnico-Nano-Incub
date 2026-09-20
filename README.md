@@ -35,26 +35,23 @@ Espere o serviço ficar saudável (`healthy`) antes de rodar migrations ou `comp
 
 ## Variáveis de ambiente
 
-Copie `.env.example` para `.env`. Depois gere `APP_KEY` com:
+Copie `.env.example` para `.env`. O example deixa `APP_KEY` vazio de propósito. Gere a chave só no `.env` com:
 
 ```bash
 php artisan key:generate
 ```
 
-Não cole o valor da chave no README nem em commits.
+Não cole o valor da chave no `.env.example`, no README nem em commits. O `.env` real não entra no git.
 
-Nomes obrigatórios (preencha no `.env`; este documento lista só os nomes, exceto `HASH_DRIVER`):
+O restante do `.env` precisa ficar assim (os `DB_*` são os mesmos do `compose.yml`):
 
-- `APP_KEY`
-- `HASH_DRIVER` — obrigatório com o valor `argon`. Sem essa variável o Laravel assume bcrypt e o `/login` falha (`This password does not use the Bcrypt algorithm`), porque as senhas gravadas são Argon2.
-- `DB_CONNECTION`
-- `DB_HOST`
-- `DB_PORT`
-- `DB_DATABASE`
-- `DB_USERNAME`
-- `DB_PASSWORD`
+- `HASH_DRIVER=argon` — obrigatório. Sem isso o Laravel assume bcrypt e o `/login` falha (`This password does not use the Bcrypt algorithm`), porque as senhas gravadas são Argon2i.
+- `DB_CONNECTION=mysql`
+- `DB_HOST=127.0.0.1`
+- `DB_PORT=3306`
+- `DB_DATABASE`, `DB_USERNAME` e `DB_PASSWORD` iguais a `MYSQL_DATABASE`, `MYSQL_USER` e `MYSQL_PASSWORD` do Compose (serviço MySQL 8).
 
-Se o `.env` já existir, `composer run setup` não o sobrescreve (a cópia ocorre só quando o arquivo falta). `APP_KEY` e `HASH_DRIVER=argon` ainda precisam existir.
+Se o `.env` já existir, `composer run setup` não o sobrescreve (a cópia ocorre só quando o arquivo falta). Depois da cópia, `APP_KEY` ainda precisa ser gerada e `HASH_DRIVER=argon` precisa existir.
 
 ## Migrations
 
