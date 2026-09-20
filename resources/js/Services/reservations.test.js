@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { router } from '@inertiajs/react';
-import { cancel, store, visitIndex } from './reservations';
+import { cancel, store, update, visitIndex } from './reservations';
 
 vi.mock('@inertiajs/react', () => ({
     router: {
@@ -12,6 +12,7 @@ function createForm(overrides = {}) {
     return {
         post: vi.fn(),
         patch: vi.fn(),
+        put: vi.fn(),
         ...overrides,
     };
 }
@@ -24,6 +25,15 @@ describe('reservations service', () => {
 
         expect(form.post).toHaveBeenCalledTimes(1);
         expect(form.post).toHaveBeenCalledWith('/reservations', expect.any(Object));
+    });
+
+    it('puts update through Inertia to /reservations/{id}', () => {
+        const form = createForm();
+
+        update(form, 'res-1');
+
+        expect(form.put).toHaveBeenCalledTimes(1);
+        expect(form.put).toHaveBeenCalledWith('/reservations/res-1', expect.any(Object));
     });
 
     it('patches cancel through Inertia to /reservations/{id}/cancel', () => {
