@@ -1,7 +1,7 @@
 # ADR-005: Módulo Reservation com contrato mínimo, ocupação e cancelamento
 
 - **Data**: 2026-09-18
-- **Status**: Aceito; o recorte de identidade UUID / `HasUuids` / `foreignUuid` foi substituído pelo [ADR-008](008-identidade-autoincremento-rooms-e-reservations.md)
+- **Status**: Aceito; o recorte de identidade UUID / `HasUuids` / `foreignUuid` foi substituído pelo [ADR-008](008-identidade-autoincremento-rooms-e-reservations.md); o recorte “não editar reserva” foi substituído pelo [ADR-009](009-edicao-parcial-de-reserva-titulo-e-responsavel.md)
 - **Decisores**: Time do Painel Administrativo
 - **Tags**: architecture, reservations, occupancy, concurrency, laravel
 
@@ -119,6 +119,7 @@ Isso impede sobreposições e permite reservas consecutivas, como uma terminando
 ## Links
 
 - Substituído por: [ADR-008](008-identidade-autoincremento-rooms-e-reservations.md) (somente o recorte de identidade UUID / `HasUuids` / `foreignUuid`)
+- Substituído por: [ADR-009](009-edicao-parcial-de-reserva-titulo-e-responsavel.md) (somente o recorte “não editar reserva”; ocupação permanece imutável)
 - [ADR-001: Delimitar o escopo aos requisitos RF01–RF19 e RNF01–RNF14](001-delimitar-escopo-aos-requisitos-rf-e-rnf.md)
 - [ADR-002: Usuário mínimo com UUID v7, soft delete e hash Argon nativo do Laravel](002-usuario-minimo-uuidv7-argon2-auth-laravel.md)
 - [ADR-003: React e PHP no mesmo projeto Laravel via Inertia.js 2](003-react-e-php-no-mesmo-projeto-laravel.md)

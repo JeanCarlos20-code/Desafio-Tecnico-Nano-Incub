@@ -87,6 +87,8 @@ Opção escolhida: **"Escopo fechado nos requisitos abaixo"**, porque o desafio 
 - **RNF10** — Senhas nunca em texto puro (critério eliminatório).
 - **RNF14** — Código idiomático em Laravel (Eloquent, Form Requests).
 
+Nota extra (não reescreve o catálogo acima): o [ADR-009](009-edicao-parcial-de-reserva-titulo-e-responsavel.md) registra edição parcial de `title` e `responsible` em reserva ativa. Não existe RF de edição de reserva. Data, hora, sala e participantes continuam imutáveis nesse fluxo. Redução de capacidade da sala ainda não baixa `participants` por essa tela.
+
 ### Consequências positivas
 
 - Escopo verificável: cada entrega mapeia para um RF ou RNF.
