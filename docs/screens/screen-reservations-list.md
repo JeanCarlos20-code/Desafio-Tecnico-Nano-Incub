@@ -143,7 +143,7 @@ Requirements:
 ### Filter behavior
 
 - store active filters in the URL so the view can be refreshed and shared;
-- reset pagination to the first page whenever a filter changes;
+- reset pagination to `page=1` whenever a filter changes and keep the current `limit`;
 - use server-side filtering as the authoritative implementation;
 - debounce only controls that benefit from it; selects and date inputs may apply immediately;
 - display the active values after navigation or validation failures.
@@ -323,13 +323,13 @@ If the session expires or the user is unauthenticated, redirect to `/login`. The
 
 ## Pagination
 
-Use server-driven pagination when the number of filtered reservations exceeds the configured page size.
+Use server-driven pagination when the filtered `total` is greater than `limit`. Query params are `page` (default 1, min 1) and `limit` (default 20, min 1, max 100). The Inertia `reservations` prop is only `{ data, page, limit, total }`. See [ADR-010](../adr/010-envelope-simples-de-paginacao-page-e-limit.md).
 
 Requirements:
 
-- preserve `room_id` and `date` across pages;
-- reset to page one when a filter changes;
-- expose previous, next, and available page controls accessibly;
+- preserve `room_id`, `period`, `starts_on`, and `ends_on` across pages, plus `page` and `limit`;
+- reset to `page=1` when a filter changes and keep the current `limit`;
+- expose previous and next controls accessibly;
 - retain chronological ordering across all pages.
 
 ## Responsiveness
