@@ -43,9 +43,10 @@ php artisan key:generate
 
 Não cole o valor da chave no README nem em commits.
 
-Nomes obrigatórios (preencha no `.env`; este documento lista só os nomes):
+Nomes obrigatórios (preencha no `.env`; este documento lista só os nomes, exceto `HASH_DRIVER`):
 
 - `APP_KEY`
+- `HASH_DRIVER` — obrigatório com o valor `argon`. Sem essa variável o Laravel assume bcrypt e o `/login` falha (`This password does not use the Bcrypt algorithm`), porque as senhas gravadas são Argon2.
 - `DB_CONNECTION`
 - `DB_HOST`
 - `DB_PORT`
@@ -53,7 +54,7 @@ Nomes obrigatórios (preencha no `.env`; este documento lista só os nomes):
 - `DB_USERNAME`
 - `DB_PASSWORD`
 
-Se o `.env` já existir, `composer run setup` não o sobrescreve (a cópia ocorre só quando o arquivo falta). `APP_KEY` ainda precisa existir.
+Se o `.env` já existir, `composer run setup` não o sobrescreve (a cópia ocorre só quando o arquivo falta). `APP_KEY` e `HASH_DRIVER=argon` ainda precisam existir.
 
 ## Migrations
 
