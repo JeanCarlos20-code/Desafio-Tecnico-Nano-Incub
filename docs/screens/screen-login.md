@@ -192,14 +192,14 @@ There is no password recovery link and no cadastro navigation because those flow
 
 ### Desktop and landscape tablet
 
-- center the card and apply a maximum width;
-- use two columns with proportions close to `46% / 54%`;
+- center the card and apply a maximum width; the card is `w-full` up to `max-w-6xl` (72rem) from Tailwind `lg`, then `xl:max-w-7xl` (80rem) from `xl`;
+- use two columns with proportions close to `46% / 54%` at `lg` and above;
 - keep the image and institutional content visible;
 - vertically center the authentication form inside the right column.
 
 ### Portrait tablet and mobile
 
-- use a single-column layout;
+- use a single-column layout; the card stays `w-full` inside the padded viewport;
 - hide the large image or reduce it to a compact header;
 - keep the `ReservaSalas` wordmark visible near the top;
 - make fields and the primary button fill the available width;

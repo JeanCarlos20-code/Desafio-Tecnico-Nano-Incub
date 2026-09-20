@@ -265,12 +265,20 @@ describe('User/Login screen', () => {
 
         const card = container.querySelector('[data-layout="login-card"]');
         const hero = container.querySelector('[data-layout="register-hero"]');
+        const shell = container.firstChild;
 
+        expect(card.className).toMatch(/\bw-full\b/);
+        expect(card.className).toMatch(/\bmax-w-6xl\b/);
+        expect(card.className).toMatch(/\bxl:max-w-7xl\b/);
+        expect(card.className).not.toMatch(/\bmax-w-5xl\b/);
         expect(card.className).toMatch(/lg:grid-cols-/);
+        expect(card.className).toMatch(/46%/);
+        expect(card.className).toMatch(/54%/);
         expect(hero.className).toMatch(/hidden/);
         expect(hero.className).toMatch(/lg:flex/);
         expect(screen.getByRole('button', { name: 'Entrar' }).className).toMatch(/w-full/);
-        expect(container.firstChild.className).toMatch(/overflow-x-hidden/);
+        expect(shell.className).toMatch(/\bpx-6\b/);
+        expect(shell.className).toMatch(/overflow-x-hidden/);
         const form = screen.getByRole('button', { name: 'Entrar' }).closest('form');
         expect(form.textContent).toContain('Reserva');
         expect(form.textContent).toContain('Salas');
