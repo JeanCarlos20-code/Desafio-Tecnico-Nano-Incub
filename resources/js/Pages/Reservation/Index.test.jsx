@@ -364,6 +364,43 @@ describe('Reservation/Index', () => {
         expect(form.patch).toHaveBeenCalledWith('/reservations/1/cancel', expect.any(Object));
     });
 
+    it('hides the cancel dialog on Voltar and does not PATCH', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        renderIndex();
+
+        await user.click(screen.getAllByRole('button', { name: 'Cancelar' })[0]);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(form.patch).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole('button', { name: 'Voltar' }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(form.patch).not.toHaveBeenCalled();
+    });
+
+    it('hides the cancel dialog after a successful cancel onSuccess', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        form.patch.mockImplementation((_url, options) => {
+            options.onSuccess();
+        });
+
+        renderIndex();
+
+        await user.click(screen.getAllByRole('button', { name: 'Cancelar' })[0]);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
+
+        expect(form.patch).toHaveBeenCalledWith('/reservations/1/cancel', expect.any(Object));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     it('shows Cancelando... while processing', async () => {
         const user = userEvent.setup();
         const form = createForm();
@@ -384,6 +421,7 @@ describe('Reservation/Index', () => {
             />,
         );
 
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancelando...' })).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Voltar' })).toBeDisabled();
     });

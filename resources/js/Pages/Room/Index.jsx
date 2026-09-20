@@ -43,7 +43,11 @@ export default function Index({
             return;
         }
 
-        destroy(form, pending.id);
+        destroy(form, pending.id, {
+            onSuccess: () => {
+                setPending(null);
+            },
+        });
     }
 
     function onDialogKeyDown(event) {

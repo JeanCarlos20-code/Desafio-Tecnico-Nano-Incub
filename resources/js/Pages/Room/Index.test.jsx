@@ -233,6 +233,23 @@ describe('Room/Index', () => {
         expect(form.delete).not.toHaveBeenCalled();
     });
 
+    it('hides the delete dialog on Cancelar and does not DELETE', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        render(<Index rooms={sampleRooms} />);
+
+        await user.click(screen.getAllByRole('button', { name: 'Excluir Sala Azul' })[0]);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(form.delete).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(form.delete).not.toHaveBeenCalled();
+    });
+
     it('does not call delete on cancel or Escape and returns focus to the delete control', async () => {
         const user = userEvent.setup();
         const form = createForm();
@@ -256,6 +273,26 @@ describe('Room/Index', () => {
         expect(deleteButton).toHaveFocus();
     });
 
+    it('hides the delete dialog after a successful delete onSuccess', async () => {
+        const user = userEvent.setup();
+        const form = createForm();
+        useForm.mockReturnValue(form);
+
+        form.delete.mockImplementation((_url, options) => {
+            options.onSuccess();
+        });
+
+        render(<Index rooms={sampleRooms} />);
+
+        await user.click(screen.getAllByRole('button', { name: 'Excluir Sala Azul' })[0]);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Excluir sala' }));
+
+        expect(form.delete).toHaveBeenCalledWith('/rooms/1', expect.any(Object));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     it('confirm calls DELETE once and shows Excluindo... while processing', async () => {
         const user = userEvent.setup();
         const form = createForm();
@@ -273,6 +310,7 @@ describe('Room/Index', () => {
         useForm.mockReturnValue(form);
         rerender(<Index rooms={sampleRooms} />);
 
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Excluindo...' })).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     });

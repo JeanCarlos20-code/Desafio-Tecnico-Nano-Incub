@@ -63,6 +63,10 @@ export default function Index({
         }
 
         cancel(form, pending.id, {
+            onSuccess: () => {
+                setPending(null);
+                setCancelError('');
+            },
             onError: () => {
                 setCancelError('Não foi possível cancelar a reserva. Tente novamente.');
             },
