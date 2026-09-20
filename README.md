@@ -96,7 +96,7 @@ O overlap de reservas ativas (RF13–RF18) vive na Application: consecutivas pas
 
 ## O que ficou de fora
 
-O ADR-001 cortou cadastro público, edição de reserva, calendário, e-mail e papéis extras. Com mais tempo, esses itens seriam os primeiros a voltar, sem reabrir o recorte do desafio.
+O ADR-001 cortou cadastro público, calendário, e-mail e papéis extras. Edição completa de reserva (data, hora, sala, participantes) continua de fora: só título e responsável mudam em reserva ativa (ADR-009). Ocupação fica travada. Redução de capacidade da sala ainda não baixa `participants` por essa tela; o caminho continua sendo cancelar e recriar. Com mais tempo, esses itens seriam os primeiros a voltar, sem reabrir o recorte do desafio.
 
 ## Uso de IA
 
