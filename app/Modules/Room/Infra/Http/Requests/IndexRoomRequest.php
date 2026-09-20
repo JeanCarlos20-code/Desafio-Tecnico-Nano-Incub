@@ -19,6 +19,7 @@ class IndexRoomRequest extends FormRequest
         return [
             'status' => ['sometimes', 'in:all,active,inactive'],
             'page' => ['sometimes', 'integer', 'min:1'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];
     }
 
@@ -29,6 +30,11 @@ class IndexRoomRequest extends FormRequest
     {
         return [
             'status.in' => 'Informe um status válido.',
+            'page.integer' => 'Informe uma página válida.',
+            'page.min' => 'Informe uma página válida.',
+            'limit.integer' => 'Informe um limite válido.',
+            'limit.min' => 'Informe um limite válido.',
+            'limit.max' => 'Informe um limite válido.',
         ];
     }
 }
