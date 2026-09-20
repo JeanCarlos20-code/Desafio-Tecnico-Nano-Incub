@@ -37,7 +37,7 @@ class ReservationCancelHttpTest extends TestCase
 
         $reservation->refresh();
         $this->assertNotNull($reservation->cancelled_at);
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
 
         $this->actingAs($user)
             ->post(route('reservations.store'), [
@@ -50,7 +50,7 @@ class ReservationCancelHttpTest extends TestCase
             ])
             ->assertRedirect(route('reservations.index'));
 
-        $this->assertDatabaseCount('reservations', 2);
+        $this->assertDatabaseCount('reservations', 5);
         $this->assertDatabaseHas('reservations', ['title' => 'Reuso', 'cancelled_at' => null]);
     }
 
@@ -68,7 +68,7 @@ class ReservationCancelHttpTest extends TestCase
 
         $reservation->refresh();
         $this->assertSame($original, $reservation->cancelled_at?->format('Y-m-d H:i:s'));
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 4);
     }
 
     public function test_cancel_of_unknown_id_returns_404_and_persists_nothing(): void
@@ -79,6 +79,6 @@ class ReservationCancelHttpTest extends TestCase
             ->patch('/reservations/018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c99/cancel')
             ->assertNotFound();
 
-        $this->assertDatabaseCount('reservations', 0);
+        $this->assertDatabaseCount('reservations', 3);
     }
 }

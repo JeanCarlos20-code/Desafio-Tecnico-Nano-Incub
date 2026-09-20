@@ -37,7 +37,8 @@ class ReservationRoomLifecycleConcurrencyHttpTest extends TestCase
     {
         [$output, $room] = $this->runLifecycleRace('concurrency_deactivate_worker.php');
 
-        $this->assertSame(0, Reservation::query()->count());
+        $this->assertSame(0, Reservation::query()->where('room_id', $room->id)->count());
+        $this->assertDatabaseCount('reservations', 3);
         $this->assertFalse((bool) $room->fresh()->is_active);
         $this->assertStringContainsString('Não é possível reservar uma sala inativa.', $output);
     }
@@ -46,7 +47,8 @@ class ReservationRoomLifecycleConcurrencyHttpTest extends TestCase
     {
         [$output, $room] = $this->runLifecycleRace('concurrency_delete_worker.php');
 
-        $this->assertSame(0, Reservation::query()->count());
+        $this->assertSame(0, Reservation::query()->where('room_id', $room->id)->count());
+        $this->assertDatabaseCount('reservations', 3);
         $this->assertSoftDeleted('rooms', ['id' => $room->id]);
         $this->assertStringContainsString('Sala não encontrada.', $output);
     }
