@@ -49,12 +49,12 @@ class RoomIndexHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Room/Index')
                 ->has('rooms.data', 5)
-                ->where('rooms.data.0.id', $ordered[0]->id)
+                ->where('rooms.data.0.id', (string) $ordered[0]->id)
                 ->where('rooms.data.0.name', $ordered[0]->name)
                 ->where('rooms.data.0.capacity', $ordered[0]->capacity)
                 ->where('rooms.data.0.status', $ordered[0]->is_active ? 'Ativa' : 'Inativa')
                 ->where('rooms.data.0.created_at', $ordered[0]->created_at->timezone(config('app.timezone'))->format('d/m/Y'))
-                ->where('rooms.data.1.id', $ordered[1]->id)
+                ->where('rooms.data.1.id', (string) $ordered[1]->id)
                 ->where('rooms.data.1.status', $ordered[1]->is_active ? 'Ativa' : 'Inativa')
                 ->where('rooms.total', 5)
                 ->where('rooms.per_page', 15)
@@ -108,7 +108,7 @@ class RoomIndexHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.status', 'inactive')
                 ->has('rooms.data', 1)
-                ->where('rooms.data.0.id', $inactive->id)
+                ->where('rooms.data.0.id', (string) $inactive->id)
             );
 
         $this->actingAs($user)

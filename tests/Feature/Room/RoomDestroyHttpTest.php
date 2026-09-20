@@ -100,9 +100,9 @@ class RoomDestroyHttpTest extends TestCase
         $trashed->delete();
 
         $target = match ($scenario) {
-            'unknown' => '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c99',
+            'unknown' => '999999',
             'malformed' => 'not-a-uuid',
-            'soft-deleted' => $trashed->id,
+            'soft-deleted' => (string) $trashed->id,
         };
 
         $this->actingAs($user)

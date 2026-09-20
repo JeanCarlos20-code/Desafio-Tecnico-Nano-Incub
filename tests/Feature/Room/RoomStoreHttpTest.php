@@ -31,7 +31,7 @@ class RoomStoreHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Room/Create'));
     }
 
-    public function test_store_persists_uuid_v7_adr_004_columns_defaults_is_active_and_redirects_with_flash(): void
+    public function test_store_persists_incrementing_integer_id_adr_004_columns_defaults_is_active_and_redirects_with_flash(): void
     {
         $user = UserModel::factory()->create();
 
@@ -53,8 +53,9 @@ class RoomStoreHttpTest extends TestCase
 
         $room = Room::query()->where('name', 'Sala Azul')->first();
         $this->assertNotNull($room);
-        $this->assertTrue(Str::isUuid($room->id));
-        $this->assertSame('7', $room->id[14]);
+        $this->assertFalse(Str::isUuid((string) $room->id));
+        $this->assertNotFalse(filter_var($room->id, FILTER_VALIDATE_INT));
+        $this->assertGreaterThan(0, (int) $room->id);
         $this->assertSame('Sala Azul', $room->name);
         $this->assertSame(10, $room->capacity);
         $this->assertTrue($room->is_active);

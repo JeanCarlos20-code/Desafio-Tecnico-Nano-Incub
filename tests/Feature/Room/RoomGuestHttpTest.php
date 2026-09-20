@@ -39,7 +39,7 @@ class RoomGuestHttpTest extends TestCase
      */
     public static function guestRoomRoutes(): array
     {
-        $id = '018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11';
+        $id = '1';
 
         return [
             'GET /rooms' => ['get', '/rooms'],
