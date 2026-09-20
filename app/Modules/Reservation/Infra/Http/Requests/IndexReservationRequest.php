@@ -21,6 +21,8 @@ class IndexReservationRequest extends FormRequest
             'period' => ['sometimes', 'in:all,today,tomorrow,week'],
             'starts_on' => ['nullable', 'date_format:Y-m-d', 'required_with:ends_on'],
             'ends_on' => ['nullable', 'date_format:Y-m-d', 'required_with:starts_on', 'after_or_equal:starts_on'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];
     }
 
@@ -37,6 +39,11 @@ class IndexReservationRequest extends FormRequest
             'ends_on.date_format' => 'Informe uma data final válida.',
             'ends_on.required_with' => 'Informe a data inicial e a data final.',
             'ends_on.after_or_equal' => 'A data final deve ser igual ou posterior à data inicial.',
+            'page.integer' => 'Informe uma página válida.',
+            'page.min' => 'Informe uma página válida.',
+            'limit.integer' => 'Informe um limite válido.',
+            'limit.min' => 'Informe um limite válido.',
+            'limit.max' => 'Informe um limite válido.',
         ];
     }
 }
