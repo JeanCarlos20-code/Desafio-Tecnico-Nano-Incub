@@ -104,7 +104,7 @@ Ao inativar uma sala que possui reuniões futuras, o usuário pode escolher entr
 
 Para exclusão, utilizei Soft Delete, preenchendo `deleted_at` em vez de remover fisicamente o registro, preservando o histórico.
 
-Não implementei alteração de data e horário das reservas para evitar complexidade fora do escopo. Caso seja necessário alterar esse período, a reserva pode ser cancelada e criada novamente.
+Não implementei alteração de data, horário das reservas e sala para evitar complexidade fora do escopo. Caso seja necessário alterar esse período ou a sala, a reserva pode ser cancelada e criada novamente.
 
 Além do filtro por dia solicitado, adicionei a possibilidade de filtrar reservas por intervalo de datas, mantendo um período padrão selecionado na tela.
 
