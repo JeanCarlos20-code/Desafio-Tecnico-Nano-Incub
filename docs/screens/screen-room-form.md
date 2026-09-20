@@ -158,6 +158,8 @@ required|integer|min:1
 
 Do not invent an arbitrary maximum capacity unless the chosen database type or business decision requires one. If a maximum is introduced, document it and use the same limit in frontend hints and backend validation.
 
+On edit save, Laravel refuses a lower capacity when this room has one or more future active reservations (`cancelled_at` null, `starts_at` after now) whose `participants` exceed the proposed number. The room row and those reservations stay unchanged. The error is returned on `capacity` and shown on the Capacidade field. One meeting: `Não é possível reduzir a capacidade. Existe 1 reunião marcada com mais participantes do que a nova capacidade. Altere essa reunião primeiro e depois volte.` More than one: `Não é possível reduzir a capacidade. Existem {n} reuniões marcadas com mais participantes do que a nova capacidade. Altere essas reuniões primeiro e depois volte.` Increase, same capacity, and future meetings that already fit are saved as usual. Changing those meetings means cancel (then create again if needed); this screen does not edit reservation participants.
+
 ### Status
 
 The `Status` field exists only in edit mode. It must not be rendered or submitted by the create form.
