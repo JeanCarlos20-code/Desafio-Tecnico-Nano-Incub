@@ -87,7 +87,7 @@ class CreateReservationTest extends TestCase
             );
             $this->fail('Expected StartsInPast');
         } catch (StartsInPast $exception) {
-            $this->assertSame('O horário inicial não pode estar no passado.', $exception->getMessage());
+            $this->assertSame('A data não pode estar no passado.', $exception->getMessage());
         }
 
         $this->assertSame([], $reservations->created);
