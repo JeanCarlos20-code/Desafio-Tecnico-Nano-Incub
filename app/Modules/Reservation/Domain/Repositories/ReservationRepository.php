@@ -37,6 +37,8 @@ interface ReservationRepository
 
     public function countActiveFutureByRoom(string $roomId, DateTimeImmutable $now): int;
 
+    public function countActiveFutureExceedingCapacity(string $roomId, DateTimeImmutable $now, int $capacity): int;
+
     /**
      * @param  list<string>  $ids
      * @return array<string, int>
