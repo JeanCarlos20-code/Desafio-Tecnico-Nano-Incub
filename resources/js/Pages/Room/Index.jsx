@@ -5,7 +5,7 @@ import { destroy, visitIndex } from '../../Services/rooms';
 
 export default function Index({
     rooms,
-    filters = { status: 'all' },
+    filters = { status: 'active' },
     hasAny = false,
     loadError = false,
     loading = false,
@@ -125,7 +125,7 @@ export default function Index({
                 </label>
                 <select
                     id="status"
-                    value={filters.status ?? 'all'}
+                    value={filters.status ?? 'active'}
                     onChange={(event) => applyStatus(event.target.value)}
                     className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -300,7 +300,7 @@ export default function Index({
 }
 
 function statusQuery(status) {
-    return status && status !== 'all' ? { status } : {};
+    return status && status !== 'active' ? { status } : {};
 }
 
 function listingHref({ status, page, limit }) {
@@ -309,7 +309,7 @@ function listingHref({ status, page, limit }) {
     params.set('page', String(page));
     params.set('limit', String(limit));
 
-    if (status && status !== 'all') {
+    if (status && status !== 'active') {
         params.set('status', status);
     }
 

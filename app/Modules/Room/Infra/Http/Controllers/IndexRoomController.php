@@ -18,7 +18,7 @@ class IndexRoomController extends Controller
     {
         $page = (int) ($request->validated('page') ?? 1);
         $limit = (int) ($request->validated('limit') ?? 20);
-        $status = $request->validated('status') ?? 'all';
+        $status = $request->validated('status') ?? 'active';
         $result = $listRooms->execute($page, $limit, $status);
         $counts = $reservations->countByRoomIds(array_map(
             fn (Room $room): string => $room->id,

@@ -12,7 +12,7 @@ final class ListRooms
     /**
      * @return array{items: list<Room>, total: int, hasAny: bool}
      */
-    public function execute(int $page, int $perPage = 15, string $status = 'all'): array
+    public function execute(int $page, int $perPage = 15, string $status = 'active'): array
     {
         if ($page < 1) {
             $page = 1;
