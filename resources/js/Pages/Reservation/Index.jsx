@@ -273,6 +273,7 @@ export default function Index({
                         <input
                             id="starts_on"
                             type="date"
+                            lang="pt-BR"
                             value={range.starts_on}
                             onChange={(event) => applyRangeField('starts_on', event.target.value)}
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -285,6 +286,7 @@ export default function Index({
                         <input
                             id="ends_on"
                             type="date"
+                            lang="pt-BR"
                             value={range.ends_on}
                             onChange={(event) => applyRangeField('ends_on', event.target.value)}
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -368,7 +370,7 @@ export default function Index({
                                         <th scope="col" className="px-4 py-3 font-medium">
                                             Fim
                                         </th>
-                                        <th scope="col" className="px-4 py-3 font-medium">
+                                        <th scope="col" className="px-4 py-3 text-center font-medium">
                                             Participantes
                                         </th>
                                         <th scope="col" className="px-4 py-3 font-medium">
@@ -388,7 +390,7 @@ export default function Index({
                                             <td className="px-4 py-3 text-slate-700">{reservation.title}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.starts_at}</td>
                                             <td className="px-4 py-3 text-slate-700">{reservation.ends_at}</td>
-                                            <td className="px-4 py-3 text-slate-700">{reservation.participants}</td>
+                                            <td className="px-4 py-3 text-center text-slate-700">{reservation.participants}</td>
                                             <td className="px-4 py-3">
                                                 <StatusBadge
                                                     active={reservation.status === 'active'}

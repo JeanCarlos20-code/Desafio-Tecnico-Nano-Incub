@@ -191,6 +191,7 @@ export default function Create({ rooms = [], timezone = 'UTC' }) {
                             <input
                                 id="date"
                                 type="date"
+                                lang="pt-BR"
                                 value={form.data.date}
                                 min={minDate}
                                 onChange={(event) => form.setData('date', event.target.value)}
@@ -204,6 +205,7 @@ export default function Create({ rooms = [], timezone = 'UTC' }) {
                             <input
                                 id="start_time"
                                 type="time"
+                                lang="pt-BR"
                                 value={form.data.start_time}
                                 min={minStart || undefined}
                                 onChange={(event) => form.setData('start_time', event.target.value)}
@@ -217,6 +219,7 @@ export default function Create({ rooms = [], timezone = 'UTC' }) {
                             <input
                                 id="end_time"
                                 type="time"
+                                lang="pt-BR"
                                 value={form.data.end_time}
                                 min={form.data.start_time || undefined}
                                 onChange={(event) => form.setData('end_time', event.target.value)}
