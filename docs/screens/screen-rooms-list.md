@@ -89,23 +89,25 @@ The page provides one server-driven filter so the administrator can see active r
 
 | Filter | Control | Query parameter | Default |
 | --- | --- | --- | --- |
-| `Status` | Select | `status` | `all` (`Todas`) |
+| `Status` | Select | `status` | `active` (`Ativas`; omit `status`) |
 
 | Visible label | Query value | Result |
 | --- | --- | --- |
-| `Todas` | `all` or omitted | Active and inactive rooms |
-| `Ativas` | `active` | Only `is_active = true` |
+| `Todas` | `all` | Active and inactive rooms |
+| `Ativas` | `active` or omitted | Only `is_active = true` |
 | `Inativas` | `inactive` | Only `is_active = false` |
 
-Example URL:
+Example URLs:
 
 ```text
+/rooms
+/rooms?status=all
 /rooms?status=inactive
 ```
 
 Requirements:
 
-- store the filter in the URL so the view can be refreshed and shared;
+- store the filter in the URL so the view can be refreshed and shared (`status` omitted when Ativas; include `status=all` for Todas and `status=inactive` for Inativas);
 - reset pagination to `page=1` when the filter changes and keep the current `limit`;
 - use server-side filtering as the authoritative implementation;
 - keep the selected value after navigation or validation failures;
@@ -225,7 +227,7 @@ The challenge does not define a mandatory room ordering. Use a deterministic def
 
 The selected rule must remain consistent between requests.
 
-If `total` is greater than `limit`, display server-driven pagination below the table. Query params are `page` (default 1, min 1) and `limit` (default 20, min 1, max 100). The Inertia `rooms` prop is only `{ data, page, limit, total }`. Anterior/Próxima are built from that envelope plus the current `status` filter. See [ADR-010](../adr/010-envelope-simples-de-paginacao-page-e-limit.md).
+If `total` is greater than `limit`, display server-driven pagination below the table. Query params are `page` (default 1, min 1) and `limit` (default 20, min 1, max 100). The Inertia `rooms` prop is only `{ data, page, limit, total }`. Anterior/Próxima are built from that envelope plus the current `status` filter (`status` omitted when Ativas, included as `status=all` when Todas). See [ADR-010](../adr/010-envelope-simples-de-paginacao-page-e-limit.md).
 
 ## Page behavior
 
@@ -351,8 +353,8 @@ Flash messages must be announced through an accessible live region and must not 
 
 ## Required states
 
-- populated room list;
-- all-status filter;
+- populated room list (default Ativas, omitted `status`);
+- all-status filter (`status=all`);
 - active-only filter;
 - inactive-only filter;
 - empty room list;
@@ -371,7 +373,7 @@ Flash messages must be announced through an accessible live region and must not 
 - [ ] Only authenticated administrators can access `/rooms`.
 - [ ] The list displays ID, name, capacity, situation (`Situação`), creation date, and actions for every room. The room identifier is visible in the list and is not shown in the form.
 - [ ] Active and inactive rooms use distinct text labels and visual badges.
-- [ ] The status filter supports `Todas`, `Ativas`, and `Inativas`, is stored in the URL, and is applied on the server.
+- [ ] The status filter supports `Todas`, `Ativas`, and `Inativas`, is stored in the URL, and is applied on the server. Default Ativas omits `status`; Todas uses `status=all`.
 - [ ] Soft-deleted rooms never appear in this list.
 - [ ] Creation dates are displayed as `DD/MM/YYYY`.
 - [ ] `Nova sala` navigates to `/rooms/create`.

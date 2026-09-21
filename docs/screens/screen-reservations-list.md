@@ -145,7 +145,7 @@ Canceladas
 
 Requirements:
 
-- `Ativas` (`status=active`, omitted from the URL) lists only rows with `cancelled_at` null;
+- `Ativas` (`status=active`, omitted from the URL) lists only rows with `cancelled_at` null, including meetings whose `ends_at` is already past (shown as `Passada`);
 - `Canceladas` (`status=cancelled`) lists only rows with `cancelled_at` set;
 - `Todas` (`status=all`) lists both active and cancelled rows that also match room, period, and range;
 - omitted `status` on `GET /reservations` is treated as `active`;
@@ -184,7 +184,7 @@ The table displays one row per reservation.
 | `Título` | Meeting title or purpose | Plain text with safe wrapping or truncation |
 | `Início` | Start datetime | `HH:mm` when a day is selected |
 | `Fim` | End datetime | `HH:mm` when a day is selected |
-| `Participantes` | Participant count | Positive integer |
+| `Participantes` | Participant count | Positive integer centered with the `Participantes` header (`text-center`) |
 | `Situação` | Reservation state | Text badge |
 | `Ações` | Available operations | `Editar` and `Cancelar` for eligible active reservations |
 
@@ -204,16 +204,15 @@ Canceled reservations appear in this list when Status is `Todas` or `Canceladas`
 
 ## Status badges
 
-The status column is derived from `cancelledAt`:
+The status column is derived at list time from `cancelledAt` and `endsAt` versus now. Occupancy still uses only `cancelled_at`.
 
-| Backend value | Visible label | Visual treatment |
-| --- | --- | --- |
-| `active` | `Ativa` | Green text on a light-green background |
-| `cancelled` | `Cancelada` | Slate/gray text on a light-gray background |
+| Backend value | Visible label | Visual treatment | Rule |
+| --- | --- | --- | --- |
+| `active` | `Ativa` | Green text on a light-green background | Not cancelled and `endsAt` is not before now |
+| `passed` | `Passada` | Slate/gray text on a light-gray background | Not cancelled and `endsAt` is before now |
+| `cancelled` | `Cancelada` | Slate/gray text on a light-gray background | `cancelledAt` is set (wins over a past `endsAt`) |
 
-Default Ativas hides cancelled rows. With Todas or Canceladas, cancelled rows stay visible as `Cancelada`.
-
-If an active reservation has already ended, it continues to use `Ativa`. Do not invent a completed status unless it is explicitly modeled and documented.
+Default Ativas hides cancelled rows and still lists past non-cancelled rows as `Passada`. With Todas or Canceladas, cancelled rows stay visible as `Cancelada`. `Editar` and `Cancelar` remain only on `active`.
 
 ## Row actions
 
@@ -419,6 +418,7 @@ Requirements:
 - all-rooms filter;
 - selected day filter;
 - Status Ativas, Todas, and Canceladas;
+- ended non-cancelled row as `Passada` with `—` actions (still on Ativas);
 - empty unfiltered state;
 - empty filtered state;
 - loading state;
@@ -435,6 +435,7 @@ Requirements:
 
 - [ ] Only authenticated administrators can access `/reservations`.
 - [ ] The list displays ID, room, responsible person, title, start, end, participant count, situation (`Situação`), and actions.
+- [ ] `Participantes` header and cells share `text-center`.
 - [ ] Reservations are ordered by start datetime in ascending chronological order.
 - [ ] The room filter displays only reservations from the selected room.
 - [ ] The Status filter defaults to Ativas and lists Todas / Ativas / Canceladas.
@@ -443,10 +444,10 @@ Requirements:
 - [ ] Room, status, period, and range filters can be combined.
 - [ ] Active filters are represented in the URL and preserved during pagination (`status` omitted when Ativas).
 - [ ] `Nova reserva` navigates to `/reservations/create`.
-- [ ] Default Ativas lists only reservations with `cancelled_at` null.
+- [ ] Default Ativas lists only reservations with `cancelled_at` null, including past meetings labeled `Passada`.
 - [ ] The `Ações` column does not display a calendar or reservation-details icon.
 - [ ] Eligible active reservations display `Editar` (to `/reservations/{id}/edit`) beside `Cancelar`.
-- [ ] Cancelled rows show `Cancelada`, hide `Editar` and `Cancelar`, and show `—`.
+- [ ] `Passada` and `Cancelada` rows hide `Editar` and `Cancelar` and show `—`.
 - [ ] Canceling a reservation always requires explicit confirmation.
 - [ ] The cancellation dialog identifies the reservation being affected.
 - [ ] Canceling sets `cancelled_at` instead of hard-deleting the reservation record.
