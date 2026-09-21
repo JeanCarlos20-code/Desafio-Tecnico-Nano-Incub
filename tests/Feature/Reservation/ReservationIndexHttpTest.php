@@ -22,7 +22,7 @@ class ReservationIndexHttpTest extends TestCase
         $this->travelTo(now()->timezone((string) config('app.timezone'))->setDate(2026, 9, 21)->setTime(12, 0));
     }
 
-    public function test_authenticated_index_lists_every_active_row_and_echoes_period_all(): void
+    public function test_authenticated_index_defaults_to_today_and_echoes_period_today(): void
     {
         $user = UserModel::factory()->create();
         $room = Room::factory()->create(['name' => 'Sala Azul']);
@@ -51,32 +51,30 @@ class ReservationIndexHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Reservation/Index')
-                ->where('filters.period', 'all')
+                ->where('filters.period', 'today')
                 ->where('filters.starts_on', null)
                 ->where('filters.ends_on', null)
                 ->where('filters.room_id', null)
+                ->where('filters.status', 'active')
                 ->where('reservations.page', 1)
                 ->where('reservations.limit', 20)
-                ->where('reservations.total', 6)
                 ->missing('reservations.per_page')
                 ->missing('reservations.current_page')
                 ->missing('reservations.last_page')
                 ->missing('reservations.next_page_url')
                 ->missing('reservations.prev_page_url')
                 ->missing('reservations.links')
-                ->has('reservations.data', 6)
-                ->where('reservations.data', function (Collection $rows) use ($earlier, $later, $tomorrow): bool {
+                ->where('reservations.data', function (Collection $rows) use ($earlier, $later, $tomorrow, $room): bool {
                     $byId = $rows->keyBy('id');
+                    $inRoom = $rows->where('room_id', (string) $room->id);
 
                     return $byId->has($earlier->id)
                         && $byId[$earlier->id]['title'] === 'Manha'
-                        && $byId[$earlier->id]['starts_at'] === '21/09/2026 09:00'
+                        && $byId[$earlier->id]['starts_at'] === '09:00'
                         && $byId->has($later->id)
                         && $byId[$later->id]['title'] === 'Tarde'
-                        && $byId->has($tomorrow->id)
-                        && collect($rows)->contains('title', 'Reunião da manhã')
-                        && collect($rows)->contains('title', 'Alinhamento seguinte')
-                        && collect($rows)->contains('title', 'Treinamento da tarde');
+                        && ! $byId->has($tomorrow->id)
+                        && $inRoom->count() === 2;
                 })
             );
     }
@@ -289,6 +287,13 @@ class ReservationIndexHttpTest extends TestCase
             'starts_at' => '2026-09-22 09:00:00',
             'ends_at' => '2026-09-22 09:30:00',
         ]);
+        Reservation::factory()->create([
+            'room_id' => $roomA->id,
+            'title' => 'Cancelada outro dia',
+            'starts_at' => '2026-09-22 11:00:00',
+            'ends_at' => '2026-09-22 11:30:00',
+            'cancelled_at' => '2026-09-21 08:00:00',
+        ]);
 
         $this->actingAs($user)
             ->get('/reservations?room_id='.$roomA->id.'&period=today')
@@ -297,10 +302,23 @@ class ReservationIndexHttpTest extends TestCase
                 ->component('Reservation/Index')
                 ->where('filters.room_id', (string) $roomA->id)
                 ->where('filters.period', 'today')
+                ->where('filters.status', 'active')
                 ->has('reservations.data', 1)
                 ->where('reservations.data.0.id', (string) $active->id)
                 ->where('reservations.data.0.status', 'active')
                 ->where('reservations.data.0.status_label', 'Ativa')
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$roomA->id.'&period=today&status=cancelled')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.period', 'today')
+                ->where('filters.status', 'cancelled')
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.title', 'Cancelada A')
+                ->where('reservations.data.0.status', 'cancelled')
+                ->where('reservations.data.0.status_label', 'Cancelada')
             );
     }
 
@@ -363,8 +381,103 @@ class ReservationIndexHttpTest extends TestCase
                 })
             );
 
+        $this->actingAs($user)
+            ->get('/reservations?period=all&status=all')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Reservation/Index')
+                ->where('filters.status', 'all')
+                ->where('hasAny', true)
+                ->where('reservations.data', function (Collection $rows): bool {
+                    $byTitle = $rows->keyBy('title');
+
+                    return $byTitle->has('Standalone')
+                        && $byTitle['Standalone']['status'] === 'cancelled'
+                        && $byTitle['Standalone']['status_label'] === 'Cancelada'
+                        && $byTitle->has('Deactivate')
+                        && $byTitle['Deactivate']['status'] === 'cancelled'
+                        && $byTitle['Deactivate']['status_label'] === 'Cancelada'
+                        && $byTitle->has('Delete')
+                        && $byTitle['Delete']['status'] === 'cancelled'
+                        && $byTitle['Delete']['status_label'] === 'Cancelada';
+                })
+            );
+
         $this->assertNotNull($standalone->fresh()->cancelled_at);
         $this->assertNotNull($toCancelOnDeactivate->fresh()->cancelled_at);
         $this->assertNotNull($toCancelOnDelete->fresh()->cancelled_at);
+    }
+
+    public function test_index_status_all_active_and_cancelled_membership_and_labels(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+        $active = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Ativa isolada',
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+        $cancelled = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Cancelada isolada',
+            'starts_at' => '2026-09-21 10:00:00',
+            'ends_at' => '2026-09-21 10:30:00',
+            'cancelled_at' => '2026-09-21 08:00:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'active')
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.id', (string) $active->id)
+                ->where('reservations.data.0.status', 'active')
+                ->where('reservations.data.0.status_label', 'Ativa')
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id.'&status=active')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'active')
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.id', (string) $active->id)
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id.'&status=cancelled')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'cancelled')
+                ->has('reservations.data', 1)
+                ->where('reservations.data.0.id', (string) $cancelled->id)
+                ->where('reservations.data.0.status', 'cancelled')
+                ->where('reservations.data.0.status_label', 'Cancelada')
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id.'&status=all')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'all')
+                ->has('reservations.data', 2)
+                ->where('reservations.data.0.id', (string) $active->id)
+                ->where('reservations.data.0.status_label', 'Ativa')
+                ->where('reservations.data.1.id', (string) $cancelled->id)
+                ->where('reservations.data.1.status_label', 'Cancelada')
+            );
+    }
+
+    public function test_index_unknown_status_returns_422_with_portuguese_message(): void
+    {
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson('/reservations?status=weekend')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['status'])
+            ->assertJsonPath('errors.status.0', 'Informe um status válido.');
     }
 }
