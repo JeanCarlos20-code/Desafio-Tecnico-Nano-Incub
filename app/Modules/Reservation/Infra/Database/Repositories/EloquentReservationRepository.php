@@ -46,10 +46,18 @@ final class EloquentReservationRepository implements ReservationRepository
         ?string $roomId,
         ?DateTimeImmutable $rangeStart,
         ?DateTimeImmutable $rangeEndExclusive,
+        string $status = 'active',
     ): array {
         $query = ReservationModel::query()
             ->with('room')
-            ->whereNull('cancelled_at')
+            ->when(
+                $status === 'active',
+                fn ($builder) => $builder->whereNull('cancelled_at'),
+            )
+            ->when(
+                $status === 'cancelled',
+                fn ($builder) => $builder->whereNotNull('cancelled_at'),
+            )
             ->when(
                 $rangeStart !== null && $rangeEndExclusive !== null,
                 fn ($builder) => $builder
@@ -71,7 +79,7 @@ final class EloquentReservationRepository implements ReservationRepository
 
     public function hasAny(): bool
     {
-        return ReservationModel::query()->whereNull('cancelled_at')->exists();
+        return ReservationModel::query()->exists();
     }
 
     public function findById(string $id): ?Reservation

@@ -73,26 +73,64 @@ class ListReservationsTest extends TestCase
         $this->assertSame('2026-09-24 00:00:00', $reservations->listed[0]['rangeEndExclusive']->format('Y-m-d H:i:s'));
     }
 
-    public function test_it_clamps_page_to_one_and_excludes_cancelled_at_rows(): void
+    public function test_it_forwards_status_defaults_to_active_and_clamps_page_to_one(): void
+    {
+        $reservations = new FakeReservationRepository;
+        $clock = new FakeClock(new DateTimeImmutable('2026-09-21 12:00:00'));
+
+        $this->list($reservations, $clock, page: 0, roomId: 'room-1', period: 'all');
+        $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'all');
+        $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'active');
+        $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'cancelled');
+
+        $this->assertSame(1, $reservations->listed[0]['page']);
+        $this->assertSame('room-1', $reservations->listed[0]['roomId']);
+        $this->assertSame('active', $reservations->listed[0]['status']);
+        $this->assertSame('all', $reservations->listed[1]['status']);
+        $this->assertSame('active', $reservations->listed[2]['status']);
+        $this->assertSame('cancelled', $reservations->listed[3]['status']);
+    }
+
+    public function test_default_and_active_return_only_actives_all_returns_both_cancelled_returns_only_cancelled(): void
     {
         $reservations = new FakeReservationRepository;
         $reservations->seed($this->reservation('active-1'));
         $reservations->seed($this->reservation('canceled-1', new DateTimeImmutable('2026-09-21 08:00:00')));
         $clock = new FakeClock(new DateTimeImmutable('2026-09-21 12:00:00'));
 
-        $result = $this->list($reservations, $clock, page: 0, roomId: 'room-1', period: 'all');
+        $default = $this->list($reservations, $clock, page: 1, roomId: null, period: 'all');
+        $this->assertSame(['active-1'], array_map(fn (Reservation $item): string => $item->id, $default['items']));
+        $this->assertSame(1, $default['total']);
 
-        $this->assertSame(1, $reservations->listed[0]['page']);
-        $this->assertSame('room-1', $reservations->listed[0]['roomId']);
-        $this->assertTrue($result['hasAny']);
-        $this->assertSame(1, $result['total']);
-        $this->assertCount(1, $result['items']);
-        $this->assertSame('active-1', $result['items'][0]->id);
+        $active = $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'active');
+        $this->assertSame(['active-1'], array_map(fn (Reservation $item): string => $item->id, $active['items']));
+
+        $all = $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'all');
+        $this->assertSame(
+            ['active-1', 'canceled-1'],
+            array_map(fn (Reservation $item): string => $item->id, $all['items']),
+        );
+        $this->assertSame(2, $all['total']);
+
+        $cancelled = $this->list($reservations, $clock, page: 1, roomId: null, period: 'all', status: 'cancelled');
+        $this->assertSame(['canceled-1'], array_map(fn (Reservation $item): string => $item->id, $cancelled['items']));
+        $this->assertSame(1, $cancelled['total']);
+    }
+
+    public function test_has_any_is_true_when_only_cancelled_rows_exist_and_false_when_empty(): void
+    {
+        $clock = new FakeClock(new DateTimeImmutable('2026-09-21 12:00:00'));
 
         $onlyCanceled = new FakeReservationRepository;
         $onlyCanceled->seed($this->reservation('canceled-only', new DateTimeImmutable('2026-09-21 08:00:00')));
 
-        $empty = $this->list($onlyCanceled, $clock, page: 1, roomId: null, period: 'all');
+        $cancelledOnly = $this->list($onlyCanceled, $clock, page: 1, roomId: null, period: 'all', status: 'active');
+
+        $this->assertTrue($cancelledOnly['hasAny']);
+        $this->assertSame(0, $cancelledOnly['total']);
+        $this->assertSame([], $cancelledOnly['items']);
+
+        $empty = $this->list(new FakeReservationRepository, $clock, page: 1, roomId: null, period: 'all');
 
         $this->assertFalse($empty['hasAny']);
         $this->assertSame(0, $empty['total']);
@@ -108,6 +146,7 @@ class ListReservationsTest extends TestCase
         ?string $startsOn = null,
         ?string $endsOn = null,
         string $timezone = 'UTC',
+        string $status = 'active',
     ): array {
         return (new ListReservations($reservations, $clock))->execute(
             $page,
@@ -117,6 +156,7 @@ class ListReservationsTest extends TestCase
             $startsOn,
             $endsOn,
             $timezone,
+            $status,
         );
     }
 

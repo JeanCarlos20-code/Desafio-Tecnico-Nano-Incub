@@ -20,15 +20,16 @@ class IndexReservationController extends Controller
         OccupancyRoomCatalog $rooms,
     ): Response {
         $timezone = (string) config('app.timezone');
-        $period = $request->validated('period') ?? 'all';
+        $period = $request->validated('period') ?? 'today';
         $startsOn = $request->validated('starts_on');
         $endsOn = $request->validated('ends_on');
         $roomId = $request->validated('room_id');
         $roomId = $roomId !== null ? (string) $roomId : null;
+        $status = $request->validated('status') ?? 'active';
         $page = (int) ($request->validated('page') ?? 1);
         $limit = (int) ($request->validated('limit') ?? 20);
 
-        $result = $listReservations->execute($page, $limit, $roomId, $period, $startsOn, $endsOn, $timezone);
+        $result = $listReservations->execute($page, $limit, $roomId, $period, $startsOn, $endsOn, $timezone, $status);
         $tz = new DateTimeZone($timezone);
         $timeFormat = $this->isSingleDayWindow($period, $startsOn, $endsOn) ? 'H:i' : 'd/m/Y H:i';
 
@@ -49,6 +50,7 @@ class IndexReservationController extends Controller
                 'period' => $period,
                 'starts_on' => $startsOn,
                 'ends_on' => $endsOn,
+                'status' => $status,
             ],
             'filterRooms' => array_map(
                 fn (OccupancyRoom $room): array => [
@@ -79,8 +81,8 @@ class IndexReservationController extends Controller
             'starts_at' => $startsAt->format($timeFormat),
             'ends_at' => $endsAt->format($timeFormat),
             'participants' => $reservation->participants,
-            'status' => 'active',
-            'status_label' => 'Ativa',
+            'status' => $reservation->cancelledAt !== null ? 'cancelled' : 'active',
+            'status_label' => $reservation->cancelledAt !== null ? 'Cancelada' : 'Ativa',
         ];
     }
 
