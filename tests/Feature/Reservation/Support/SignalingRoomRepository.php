@@ -12,7 +12,7 @@ final class SignalingRoomRepository implements RoomRepository
         private readonly string $barrier,
     ) {}
 
-    public function listPage(int $page, int $perPage, string $status = 'all'): array
+    public function listPage(int $page, int $perPage, string $status = 'active'): array
     {
         return $this->inner->listPage($page, $perPage, $status);
     }

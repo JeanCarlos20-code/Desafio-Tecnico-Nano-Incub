@@ -98,8 +98,11 @@ describe('Reservation/Edit', () => {
         expect(screen.getByLabelText(/Participantes/)).toBeDisabled();
         expect(screen.getByLabelText(/^Sala/)).toHaveValue('Sala Azul');
         expect(screen.getByLabelText(/^Data/)).toHaveValue('2026-09-21');
+        expect(screen.getByLabelText(/^Data/)).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText(/Horário de início/)).toHaveValue('10:00');
+        expect(screen.getByLabelText(/Horário de início/)).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText(/Horário de término/)).toHaveValue('10:30');
+        expect(screen.getByLabelText(/Horário de término/)).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText(/Participantes/)).toHaveValue(4);
 
         await user.click(screen.getByRole('button', { name: 'Salvar alterações' }));

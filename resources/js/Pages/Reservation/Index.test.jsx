@@ -84,6 +84,10 @@ function renderIndex(overrides = {}) {
     );
 }
 
+function firstDesktopRowCells(container) {
+    return container.querySelector('table tbody tr').querySelectorAll('td');
+}
+
 afterEach(() => {
     cleanup();
     vi.useRealTimers();
@@ -149,6 +153,48 @@ describe('Reservation/Index', () => {
         const editLinks = screen.getAllByRole('link', { name: 'Editar' });
 
         expect(screen.getAllByText('Cancelada', { exact: true }).length).toBeGreaterThan(0);
+        expect(editLinks.length).toBeGreaterThan(0);
+        expect(editLinks.every((link) => link.getAttribute('href') === '/reservations/1/edit')).toBe(true);
+        expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
+    it('Participantes header and participant cells share text-center', () => {
+        const { container } = renderIndex();
+
+        const participantsHeader = screen.getByRole('columnheader', { name: 'Participantes' });
+        const participantsCell = firstDesktopRowCells(container)[6];
+
+        expect(participantsHeader.className).toMatch(/\btext-center\b/);
+        expect(participantsCell.className).toMatch(/\btext-center\b/);
+        expect(participantsHeader.className).not.toMatch(/\btext-left\b/);
+        expect(participantsCell.className).not.toMatch(/\btext-left\b/);
+        expect(participantsHeader.className).not.toMatch(/\btext-right\b/);
+        expect(participantsCell.className).not.toMatch(/\btext-right\b/);
+        expect(participantsCell).toHaveTextContent('4');
+    });
+
+    it('shows Passada on a passed row, hides Editar and Cancelar, and shows a dash', () => {
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                data: [
+                    sampleReservations.data[0],
+                    {
+                        ...sampleReservations.data[1],
+                        status: 'passed',
+                        status_label: 'Passada',
+                    },
+                ],
+            },
+        });
+
+        const passada = screen.getAllByText('Passada', { exact: true })[0];
+        const editLinks = screen.getAllByRole('link', { name: 'Editar' });
+
+        expect(passada).toBeInTheDocument();
+        expect(passada.className).toMatch(/bg-slate-200/);
+        expect(passada.className).toMatch(/text-slate-700/);
         expect(editLinks.length).toBeGreaterThan(0);
         expect(editLinks.every((link) => link.getAttribute('href') === '/reservations/1/edit')).toBe(true);
         expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
@@ -331,7 +377,9 @@ describe('Reservation/Index', () => {
         const { container } = renderIndex();
 
         expect(screen.getByLabelText('Data inicial')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data inicial')).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText('Data final')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data final')).toHaveAttribute('lang', 'pt-BR');
         expect(container.querySelector('input[type="time"]')).toBeNull();
         expect(container.querySelector('input[type="datetime-local"]')).toBeNull();
         expect(screen.queryByLabelText('Data')).not.toBeInTheDocument();
@@ -734,7 +782,9 @@ describe('Reservation/Index', () => {
         expect(screen.getByRole('radio', { name: 'Amanhã' })).toBeInTheDocument();
         expect(screen.getByRole('radio', { name: '1 semana' })).toBeInTheDocument();
         expect(screen.getByLabelText('Data inicial')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data inicial')).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText('Data final')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data final')).toHaveAttribute('lang', 'pt-BR');
         expect(screen.queryByRole('radio', { name: /passad|ontem/i })).not.toBeInTheDocument();
     });
 });

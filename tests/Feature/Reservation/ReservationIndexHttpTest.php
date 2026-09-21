@@ -272,8 +272,8 @@ class ReservationIndexHttpTest extends TestCase
         $active = Reservation::factory()->create([
             'room_id' => $roomA->id,
             'title' => 'Ativa A',
-            'starts_at' => '2026-09-21 10:00:00',
-            'ends_at' => '2026-09-21 10:30:00',
+            'starts_at' => '2026-09-21 13:00:00',
+            'ends_at' => '2026-09-21 13:30:00',
         ]);
         Reservation::factory()->create([
             'room_id' => $roomB->id,
@@ -415,8 +415,8 @@ class ReservationIndexHttpTest extends TestCase
         $active = Reservation::factory()->create([
             'room_id' => $room->id,
             'title' => 'Ativa isolada',
-            'starts_at' => '2026-09-21 09:00:00',
-            'ends_at' => '2026-09-21 09:30:00',
+            'starts_at' => '2026-09-21 13:00:00',
+            'ends_at' => '2026-09-21 13:30:00',
         ]);
         $cancelled = Reservation::factory()->create([
             'room_id' => $room->id,
@@ -463,10 +463,82 @@ class ReservationIndexHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.status', 'all')
                 ->has('reservations.data', 2)
-                ->where('reservations.data.0.id', (string) $active->id)
-                ->where('reservations.data.0.status_label', 'Ativa')
-                ->where('reservations.data.1.id', (string) $cancelled->id)
-                ->where('reservations.data.1.status_label', 'Cancelada')
+                ->where('reservations.data', function (Collection $rows) use ($active, $cancelled): bool {
+                    $byId = $rows->keyBy('id');
+
+                    return $byId[$active->id]['status'] === 'active'
+                        && $byId[$active->id]['status_label'] === 'Ativa'
+                        && $byId[$cancelled->id]['status'] === 'cancelled'
+                        && $byId[$cancelled->id]['status_label'] === 'Cancelada';
+                })
+            );
+    }
+
+    public function test_index_labels_past_non_cancelled_as_passada_future_as_ativa_cancelled_past_as_cancelada_and_ativas_includes_past(): void
+    {
+        $user = UserModel::factory()->create();
+        $room = Room::factory()->create();
+        $past = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Ja encerrou',
+            'starts_at' => '2026-09-21 09:00:00',
+            'ends_at' => '2026-09-21 09:30:00',
+        ]);
+        $future = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Ainda nao comecou',
+            'starts_at' => '2026-09-21 13:00:00',
+            'ends_at' => '2026-09-21 13:30:00',
+        ]);
+        $inProgress = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Em andamento',
+            'starts_at' => '2026-09-21 11:00:00',
+            'ends_at' => '2026-09-21 13:00:00',
+        ]);
+        $cancelledPast = Reservation::factory()->create([
+            'room_id' => $room->id,
+            'title' => 'Cancelada passada',
+            'starts_at' => '2026-09-21 10:00:00',
+            'ends_at' => '2026-09-21 10:30:00',
+            'cancelled_at' => '2026-09-21 08:00:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id.'&period=today&status=all')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Reservation/Index')
+                ->where('reservations.data', function (Collection $rows) use ($past, $future, $inProgress, $cancelledPast): bool {
+                    $byId = $rows->keyBy('id');
+
+                    return $byId[$past->id]['status'] === 'passed'
+                        && $byId[$past->id]['status_label'] === 'Passada'
+                        && $byId[$future->id]['status'] === 'active'
+                        && $byId[$future->id]['status_label'] === 'Ativa'
+                        && $byId[$inProgress->id]['status'] === 'active'
+                        && $byId[$inProgress->id]['status_label'] === 'Ativa'
+                        && $byId[$cancelledPast->id]['status'] === 'cancelled'
+                        && $byId[$cancelledPast->id]['status_label'] === 'Cancelada';
+                })
+            );
+
+        $this->actingAs($user)
+            ->get('/reservations?room_id='.$room->id.'&period=today')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.status', 'active')
+                ->where('reservations.data', function (Collection $rows) use ($past, $future, $inProgress, $cancelledPast): bool {
+                    $ids = $rows->pluck('id');
+                    $byId = $rows->keyBy('id');
+
+                    return $ids->contains($past->id)
+                        && $byId[$past->id]['status'] === 'passed'
+                        && $byId[$past->id]['status_label'] === 'Passada'
+                        && $ids->contains($future->id)
+                        && $ids->contains($inProgress->id)
+                        && ! $ids->contains($cancelledPast->id);
+                })
             );
     }
 
