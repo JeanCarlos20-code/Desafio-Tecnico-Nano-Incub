@@ -26,6 +26,7 @@ final class ListReservations
         ?string $startsOn,
         ?string $endsOn,
         string $timezone,
+        string $status = 'active',
     ): array {
         if ($page < 1) {
             $page = 1;
@@ -33,7 +34,7 @@ final class ListReservations
 
         [$rangeStart, $rangeEndExclusive] = $this->resolveWindow($period, $startsOn, $endsOn, $timezone);
 
-        $pageResult = $this->reservations->listPage($page, $perPage, $roomId, $rangeStart, $rangeEndExclusive);
+        $pageResult = $this->reservations->listPage($page, $perPage, $roomId, $rangeStart, $rangeEndExclusive, $status);
 
         return [
             'items' => $pageResult['items'],

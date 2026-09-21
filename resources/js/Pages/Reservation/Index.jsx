@@ -12,7 +12,7 @@ const PERIODS = [
 
 export default function Index({
     reservations,
-    filters = { room_id: '', period: 'all', starts_on: '', ends_on: '' },
+    filters = { room_id: '', period: 'today', starts_on: '', ends_on: '', status: 'active' },
     filterRooms = [],
     hasAny = false,
     loadError = false,
@@ -35,7 +35,7 @@ export default function Index({
     const titleId = useId();
     const periodLabelId = useId();
     const queryRangeActive = Boolean(filters.starts_on && filters.ends_on);
-    const selectedPeriod = pendingPeriod ?? filters.period ?? 'all';
+    const selectedPeriod = pendingPeriod ?? filters.period ?? 'today';
     const range = draft ?? visibleRange(filters, selectedPeriod, pendingPeriod !== null);
     const rangeActive = (queryRangeActive && pendingPeriod === null) || Boolean(draft?.starts_on && draft?.ends_on);
 
@@ -94,11 +94,12 @@ export default function Index({
     }
 
     function visitFilters(next, options) {
-        const period = next.period ?? filters.period ?? 'all';
+        const period = next.period ?? filters.period ?? 'today';
         const query = {
             period,
             page: 1,
             limit,
+            ...statusQuery(next.status === undefined ? filters.status : next.status),
         };
 
         const roomId = next.room_id === undefined ? filters.room_id : next.room_id;
@@ -149,10 +150,14 @@ export default function Index({
         visitFilters(next);
     }
 
+    function applyStatus(status) {
+        visitFilters({ status });
+    }
+
     function clearFilters() {
-        setPendingPeriod('all');
+        setPendingPeriod('today');
         setDraft(null);
-        visitIndex({ period: 'all', page: 1, limit });
+        visitIndex({ period: 'today', page: 1, limit });
     }
 
     function retry() {
@@ -163,6 +168,7 @@ export default function Index({
                 ...(filters.room_id ? { room_id: filters.room_id } : {}),
                 ...(filters.starts_on ? { starts_on: filters.starts_on } : {}),
                 ...(filters.ends_on ? { ends_on: filters.ends_on } : {}),
+                ...statusQuery(filters.status),
             },
             {
                 onError: () => setClientFailed(true),
@@ -217,6 +223,21 @@ export default function Index({
                                     {room.name}
                                 </option>
                             ))}
+                        </select>
+                    </div>
+                    <div className="sm:w-1/2">
+                        <label htmlFor="status" className="block text-sm font-medium text-slate-800">
+                            Status
+                        </label>
+                        <select
+                            id="status"
+                            value={filters.status ?? 'active'}
+                            onChange={(event) => applyStatus(event.target.value)}
+                            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="all">Todas</option>
+                            <option value="active">Ativas</option>
+                            <option value="cancelled">Canceladas</option>
                         </select>
                     </div>
                     <div className="sm:w-1/2">
@@ -500,10 +521,18 @@ function listingHref({ filters, page, limit }) {
         params.set('ends_on', filters.ends_on);
     }
 
+    if (filters.status && filters.status !== 'active') {
+        params.set('status', filters.status);
+    }
+
     params.set('page', String(page));
     params.set('limit', String(limit));
 
     return `/reservations?${params.toString()}`;
+}
+
+function statusQuery(status) {
+    return status && status !== 'active' ? { status } : {};
 }
 
 function formatYmd(date) {
@@ -540,7 +569,7 @@ function datesForPeriod(period) {
     return { starts_on: '', ends_on: '' };
 }
 
-function visibleRange(filters, period = filters.period ?? 'all', ignoreQueryRange = false) {
+function visibleRange(filters, period = filters.period ?? 'today', ignoreQueryRange = false) {
     if (!ignoreQueryRange && filters.starts_on && filters.ends_on) {
         return { starts_on: filters.starts_on, ends_on: filters.ends_on };
     }

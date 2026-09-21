@@ -27,6 +27,7 @@ interface ReservationRepository
         ?string $roomId,
         ?DateTimeImmutable $rangeStart,
         ?DateTimeImmutable $rangeEndExclusive,
+        string $status = 'active',
     ): array;
 
     public function hasAny(): bool;
