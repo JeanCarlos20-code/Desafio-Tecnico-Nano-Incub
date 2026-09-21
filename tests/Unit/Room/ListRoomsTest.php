@@ -16,8 +16,16 @@ class ListRoomsTest extends TestCase
         $rooms->seed($this->room('018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c11', 'Sala A', false));
         $rooms->seed($this->room('018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c13', 'Sala C', true));
 
-        $all = (new ListRooms($rooms))->execute(0, 2);
-        $this->assertSame([['page' => 1, 'perPage' => 2, 'status' => 'all']], $rooms->listed);
+        $default = (new ListRooms($rooms))->execute(0, 2);
+        $this->assertSame([['page' => 1, 'perPage' => 2, 'status' => 'active']], $rooms->listed);
+        $this->assertTrue($default['hasAny']);
+        $this->assertSame(2, $default['total']);
+        $this->assertCount(2, $default['items']);
+        $this->assertSame('018f2b5c-6a7f-7b12-9d6f-2f8a4e0c9c12', $default['items'][0]->id);
+        $this->assertTrue($default['items'][0]->isActive);
+
+        $all = (new ListRooms($rooms))->execute(1, 2, 'all');
+        $this->assertSame('all', $rooms->listed[1]['status']);
         $this->assertTrue($all['hasAny']);
         $this->assertSame(3, $all['total']);
         $this->assertCount(2, $all['items']);
@@ -25,13 +33,13 @@ class ListRoomsTest extends TestCase
         $this->assertFalse($all['items'][0]->isActive);
 
         $active = (new ListRooms($rooms))->execute(1, 15, 'active');
-        $this->assertSame('active', $rooms->listed[1]['status']);
+        $this->assertSame('active', $rooms->listed[2]['status']);
         $this->assertSame(2, $active['total']);
         $this->assertTrue($active['hasAny']);
         $this->assertTrue($active['items'][0]->isActive);
 
         $inactive = (new ListRooms($rooms))->execute(1, 15, 'inactive');
-        $this->assertSame('inactive', $rooms->listed[2]['status']);
+        $this->assertSame('inactive', $rooms->listed[3]['status']);
         $this->assertSame(1, $inactive['total']);
         $this->assertFalse($inactive['items'][0]->isActive);
         $this->assertTrue($inactive['hasAny']);

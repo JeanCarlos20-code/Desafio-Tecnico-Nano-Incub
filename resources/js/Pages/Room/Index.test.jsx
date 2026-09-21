@@ -350,8 +350,79 @@ describe('Room/Index', () => {
             />,
         );
 
-        expect(screen.getByRole('link', { name: 'Anterior' })).toHaveAttribute('href', '/rooms?page=1&limit=2');
+        expect(screen.getByRole('link', { name: 'Anterior' })).toHaveAttribute(
+            'href',
+            '/rooms?page=1&limit=2&status=all',
+        );
         expect(screen.queryByRole('link', { name: 'Próxima' })).not.toBeInTheDocument();
+    });
+
+    it('defaults the Status select to Ativas when filters.status is omitted', () => {
+        render(<Index rooms={sampleRooms} />);
+
+        expect(screen.getByLabelText('Status')).toHaveValue('active');
+        expect(screen.getByRole('option', { name: 'Ativas' })).toHaveValue('active');
+    });
+
+    it('visits Ativas without status, Todas with status=all, Inativas with status=inactive, and resets page to 1', async () => {
+        const user = userEvent.setup();
+
+        render(
+            <Index
+                rooms={{
+                    ...sampleRooms,
+                    page: 2,
+                    limit: 2,
+                    total: 3,
+                }}
+                filters={{ status: 'inactive' }}
+                hasAny
+            />,
+        );
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'active');
+        expect(router.get).toHaveBeenLastCalledWith('/rooms', { page: 1, limit: 2 }, {});
+        expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('status');
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'all');
+        expect(router.get).toHaveBeenLastCalledWith('/rooms', { status: 'all', page: 1, limit: 2 }, {});
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'inactive');
+        expect(router.get).toHaveBeenLastCalledWith('/rooms', { status: 'inactive', page: 1, limit: 2 }, {});
+    });
+
+    it('pagination href omits status when Ativas and includes status=all when Todas', () => {
+        const { rerender } = render(
+            <Index
+                rooms={{
+                    ...sampleRooms,
+                    page: 1,
+                    limit: 2,
+                    total: 3,
+                }}
+                filters={{ status: 'active' }}
+            />,
+        );
+
+        expect(screen.getByRole('link', { name: 'Próxima' })).toHaveAttribute('href', '/rooms?page=2&limit=2');
+        expect(screen.getByRole('link', { name: 'Próxima' }).getAttribute('href')).not.toContain('status=');
+
+        rerender(
+            <Index
+                rooms={{
+                    ...sampleRooms,
+                    page: 1,
+                    limit: 2,
+                    total: 3,
+                }}
+                filters={{ status: 'all' }}
+            />,
+        );
+
+        expect(screen.getByRole('link', { name: 'Próxima' })).toHaveAttribute(
+            'href',
+            '/rooms?page=2&limit=2&status=all',
+        );
     });
 
     it('visits page 1 and the current limit when the status filter changes', async () => {

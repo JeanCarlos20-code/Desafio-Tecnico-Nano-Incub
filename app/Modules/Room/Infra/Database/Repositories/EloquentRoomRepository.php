@@ -9,7 +9,7 @@ use DateTimeImmutable;
 
 final class EloquentRoomRepository implements RoomRepository
 {
-    public function listPage(int $page, int $perPage, string $status = 'all'): array
+    public function listPage(int $page, int $perPage, string $status = 'active'): array
     {
         $query = RoomModel::query()->orderBy('id');
 

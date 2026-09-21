@@ -50,7 +50,7 @@ const sampleReservations = {
     total: 2,
 };
 
-const defaultFilters = { room_id: '', period: 'all', starts_on: '', ends_on: '' };
+const defaultFilters = { room_id: '', period: 'today', starts_on: '', ends_on: '' };
 const filterRooms = [{ id: 'room-1', name: 'Sala Azul' }];
 
 function createForm(overrides = {}) {
@@ -84,6 +84,10 @@ function renderIndex(overrides = {}) {
     );
 }
 
+function firstDesktopRowCells(container) {
+    return container.querySelector('table tbody tr').querySelectorAll('td');
+}
+
 afterEach(() => {
     cleanup();
     vi.useRealTimers();
@@ -102,7 +106,7 @@ beforeEach(() => {
 });
 
 describe('Reservation/Index', () => {
-    it('does not render a Cancelada row or badge', () => {
+    it('renders the Status select with Todas, Ativas, and Canceladas defaulting to Ativas', () => {
         const { container } = renderIndex();
 
         expect(screen.getByRole('heading', { name: 'Reservas' })).toBeInTheDocument();
@@ -118,7 +122,10 @@ describe('Reservation/Index', () => {
         expect(screen.getByRole('columnheader', { name: 'Situação' })).toBeInTheDocument();
         expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
         expect(screen.getAllByText('Ativa').length).toBeGreaterThan(0);
-        expect(screen.queryByText('Cancelada')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Status')).toHaveValue('active');
+        expect(screen.getByRole('option', { name: 'Todas' })).toHaveValue('all');
+        expect(screen.getByRole('option', { name: 'Ativas' })).toHaveValue('active');
+        expect(screen.getByRole('option', { name: 'Canceladas' })).toHaveValue('cancelled');
         expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
         expect(container.querySelector('svg[data-calendar]')).toBeNull();
         expect(screen.queryByRole('link', { name: /detalhes/i })).not.toBeInTheDocument();
@@ -128,7 +135,7 @@ describe('Reservation/Index', () => {
         );
     });
 
-    it('shows an Editar link to /reservations/{id}/edit beside Cancelar on an active row', () => {
+    it('shows Cancelada on a cancelled row, hides Editar and Cancelar, and shows a dash', () => {
         renderIndex({
             reservations: {
                 ...sampleReservations,
@@ -136,8 +143,8 @@ describe('Reservation/Index', () => {
                     sampleReservations.data[0],
                     {
                         ...sampleReservations.data[1],
-                        status: 'inactive',
-                        status_label: 'Inativa',
+                        status: 'cancelled',
+                        status_label: 'Cancelada',
                     },
                 ],
             },
@@ -145,6 +152,49 @@ describe('Reservation/Index', () => {
 
         const editLinks = screen.getAllByRole('link', { name: 'Editar' });
 
+        expect(screen.getAllByText('Cancelada', { exact: true }).length).toBeGreaterThan(0);
+        expect(editLinks.length).toBeGreaterThan(0);
+        expect(editLinks.every((link) => link.getAttribute('href') === '/reservations/1/edit')).toBe(true);
+        expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
+    it('Participantes header and participant cells share text-center', () => {
+        const { container } = renderIndex();
+
+        const participantsHeader = screen.getByRole('columnheader', { name: 'Participantes' });
+        const participantsCell = firstDesktopRowCells(container)[6];
+
+        expect(participantsHeader.className).toMatch(/\btext-center\b/);
+        expect(participantsCell.className).toMatch(/\btext-center\b/);
+        expect(participantsHeader.className).not.toMatch(/\btext-left\b/);
+        expect(participantsCell.className).not.toMatch(/\btext-left\b/);
+        expect(participantsHeader.className).not.toMatch(/\btext-right\b/);
+        expect(participantsCell.className).not.toMatch(/\btext-right\b/);
+        expect(participantsCell).toHaveTextContent('4');
+    });
+
+    it('shows Passada on a passed row, hides Editar and Cancelar, and shows a dash', () => {
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                data: [
+                    sampleReservations.data[0],
+                    {
+                        ...sampleReservations.data[1],
+                        status: 'passed',
+                        status_label: 'Passada',
+                    },
+                ],
+            },
+        });
+
+        const passada = screen.getAllByText('Passada', { exact: true })[0];
+        const editLinks = screen.getAllByRole('link', { name: 'Editar' });
+
+        expect(passada).toBeInTheDocument();
+        expect(passada.className).toMatch(/bg-slate-200/);
+        expect(passada.className).toMatch(/text-slate-700/);
         expect(editLinks.length).toBeGreaterThan(0);
         expect(editLinks.every((link) => link.getAttribute('href') === '/reservations/1/edit')).toBe(true);
         expect(screen.getAllByRole('button', { name: 'Cancelar' }).length).toBeGreaterThan(0);
@@ -187,11 +237,7 @@ describe('Reservation/Index', () => {
 
         const { rerender } = renderIndex();
 
-        expect(screen.getByLabelText('Data inicial')).toHaveValue('');
-        expect(screen.getByLabelText('Data final')).toHaveValue('');
-
-        await user.click(screen.getByRole('radio', { name: 'Hoje' }));
-        rerender(<Index {...page} filters={{ ...defaultFilters, period: 'today' }} />);
+        expect(screen.getByRole('radio', { name: 'Hoje' })).toBeChecked();
         expect(screen.getByLabelText('Data inicial')).toHaveValue('2026-09-21');
         expect(screen.getByLabelText('Data final')).toHaveValue('2026-09-21');
 
@@ -331,22 +377,24 @@ describe('Reservation/Index', () => {
         const { container } = renderIndex();
 
         expect(screen.getByLabelText('Data inicial')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data inicial')).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText('Data final')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data final')).toHaveAttribute('lang', 'pt-BR');
         expect(container.querySelector('input[type="time"]')).toBeNull();
         expect(container.querySelector('input[type="datetime-local"]')).toBeNull();
         expect(screen.queryByLabelText('Data')).not.toBeInTheDocument();
     });
 
-    it('requests period=all with no room or range when Limpar filtros is used', async () => {
+    it('requests period=today with no room or range when Limpar filtros is used', async () => {
         const user = userEvent.setup();
 
         renderIndex({
             reservations: { data: [], total: 0 },
             filters: {
                 room_id: 'room-1',
-                period: 'today',
+                period: 'week',
                 starts_on: '2026-09-21',
-                ends_on: '2026-09-21',
+                ends_on: '2026-09-27',
             },
             hasAny: true,
         });
@@ -355,12 +403,13 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all', page: 1, limit: 20 },
+            { period: 'today', page: 1, limit: 20 },
             expect.any(Object),
         );
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('room_id');
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('starts_on');
         expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('ends_on');
+        expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('status');
     });
 
     it('opens the cancel dialog, focuses Voltar, Escape closes, and patches cancel only on confirm', async () => {
@@ -480,7 +529,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all', page: 1, limit: 20 },
+            { period: 'today', page: 1, limit: 20 },
             expect.any(Object),
         );
 
@@ -494,7 +543,7 @@ describe('Reservation/Index', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/reservations',
-            { period: 'all' },
+            { period: 'today' },
             expect.any(Object),
         );
 
@@ -575,6 +624,7 @@ describe('Reservation/Index', () => {
         expect(href).toContain('page=2');
         expect(href).toContain('limit=2');
         expect(href).toMatch(/^\/reservations\?/);
+        expect(href).not.toContain('status=');
     });
 
     it('visits page 1 and the current limit when a filter changes', async () => {
@@ -602,5 +652,139 @@ describe('Reservation/Index', () => {
             { period: 'today', room_id: 'room-1', page: 1, limit: 2 },
             expect.any(Object),
         );
+        expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('status');
+    });
+
+    it('visits Canceladas with status cancelled, page 1, and keeps room, period, range, and limit', async () => {
+        const user = userEvent.setup();
+
+        renderIndex({
+            reservations: {
+                ...sampleReservations,
+                page: 2,
+                limit: 2,
+                total: 3,
+            },
+            filters: {
+                room_id: 'room-1',
+                period: 'today',
+                starts_on: '2026-09-21',
+                ends_on: '2026-09-21',
+                status: 'active',
+            },
+        });
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'cancelled');
+
+        expect(router.get).toHaveBeenCalledWith(
+            '/reservations',
+            {
+                period: 'today',
+                room_id: 'room-1',
+                starts_on: '2026-09-21',
+                ends_on: '2026-09-21',
+                status: 'cancelled',
+                page: 1,
+                limit: 2,
+            },
+            expect.any(Object),
+        );
+    });
+
+    it('omits status for Ativas, visits status=all for Todas, and omits status on Limpar filtros', async () => {
+        const user = userEvent.setup();
+
+        renderIndex({
+            reservations: { data: [], page: 1, limit: 20, total: 0 },
+            filters: {
+                room_id: 'room-1',
+                period: 'today',
+                starts_on: '2026-09-21',
+                ends_on: '2026-09-21',
+                status: 'cancelled',
+            },
+            hasAny: true,
+        });
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'active');
+        expect(router.get.mock.calls.at(-1)[1]).toEqual({
+            period: 'today',
+            room_id: 'room-1',
+            starts_on: '2026-09-21',
+            ends_on: '2026-09-21',
+            page: 1,
+            limit: 20,
+        });
+        expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('status');
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'all');
+        expect(router.get.mock.calls.at(-1)[1]).toEqual({
+            period: 'today',
+            room_id: 'room-1',
+            starts_on: '2026-09-21',
+            ends_on: '2026-09-21',
+            status: 'all',
+            page: 1,
+            limit: 20,
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+        expect(router.get.mock.calls.at(-1)[1]).toEqual({ period: 'today', page: 1, limit: 20 });
+        expect(router.get.mock.calls.at(-1)[1]).not.toHaveProperty('status');
+    });
+
+    it('keeps status=cancelled or status=all on Próxima and omits status when Ativas', () => {
+        const pagination = {
+            reservations: {
+                ...sampleReservations,
+                page: 1,
+                limit: 2,
+                total: 3,
+            },
+            filters: {
+                room_id: 'room-1',
+                period: 'today',
+                starts_on: '2026-09-21',
+                ends_on: '2026-09-21',
+                status: 'cancelled',
+            },
+        };
+
+        const { rerender } = renderIndex(pagination);
+        expect(screen.getByRole('link', { name: 'Próxima' }).getAttribute('href')).toContain('status=cancelled');
+
+        rerender(
+            <Index
+                reservations={pagination.reservations}
+                filters={{ ...pagination.filters, status: 'all' }}
+                filterRooms={filterRooms}
+                hasAny
+            />,
+        );
+        expect(screen.getByRole('link', { name: 'Próxima' }).getAttribute('href')).toContain('status=all');
+
+        rerender(
+            <Index
+                reservations={pagination.reservations}
+                filters={{ ...pagination.filters, status: 'active' }}
+                filterRooms={filterRooms}
+                hasAny
+            />,
+        );
+        expect(screen.getByRole('link', { name: 'Próxima' }).getAttribute('href')).not.toContain('status=');
+    });
+
+    it('keeps Período radios Todos, Hoje, Amanhã, and 1 semana plus Data inicial and Data final', () => {
+        renderIndex();
+
+        expect(screen.getByRole('radio', { name: 'Todos' })).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: 'Hoje' })).toBeChecked();
+        expect(screen.getByRole('radio', { name: 'Amanhã' })).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: '1 semana' })).toBeInTheDocument();
+        expect(screen.getByLabelText('Data inicial')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data inicial')).toHaveAttribute('lang', 'pt-BR');
+        expect(screen.getByLabelText('Data final')).toHaveAttribute('type', 'date');
+        expect(screen.getByLabelText('Data final')).toHaveAttribute('lang', 'pt-BR');
+        expect(screen.queryByRole('radio', { name: /passad|ontem/i })).not.toBeInTheDocument();
     });
 });

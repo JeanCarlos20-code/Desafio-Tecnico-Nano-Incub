@@ -4,10 +4,12 @@ namespace App\Modules\Reservation\Infra\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Reservation\Application\UseCases\ListReservations;
+use App\Modules\Reservation\Domain\Clock;
 use App\Modules\Reservation\Domain\Entities\OccupancyRoom;
 use App\Modules\Reservation\Domain\Entities\Reservation;
 use App\Modules\Reservation\Domain\OccupancyRoomCatalog;
 use App\Modules\Reservation\Infra\Http\Requests\IndexReservationRequest;
+use DateTimeImmutable;
 use DateTimeZone;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,22 +20,25 @@ class IndexReservationController extends Controller
         IndexReservationRequest $request,
         ListReservations $listReservations,
         OccupancyRoomCatalog $rooms,
+        Clock $clock,
     ): Response {
         $timezone = (string) config('app.timezone');
-        $period = $request->validated('period') ?? 'all';
+        $period = $request->validated('period') ?? 'today';
         $startsOn = $request->validated('starts_on');
         $endsOn = $request->validated('ends_on');
         $roomId = $request->validated('room_id');
         $roomId = $roomId !== null ? (string) $roomId : null;
+        $status = $request->validated('status') ?? 'active';
         $page = (int) ($request->validated('page') ?? 1);
         $limit = (int) ($request->validated('limit') ?? 20);
 
-        $result = $listReservations->execute($page, $limit, $roomId, $period, $startsOn, $endsOn, $timezone);
+        $result = $listReservations->execute($page, $limit, $roomId, $period, $startsOn, $endsOn, $timezone, $status);
         $tz = new DateTimeZone($timezone);
         $timeFormat = $this->isSingleDayWindow($period, $startsOn, $endsOn) ? 'H:i' : 'd/m/Y H:i';
+        $now = $clock->now();
 
         $items = array_map(
-            fn (Reservation $reservation): array => $this->toListItem($reservation, $tz, $timeFormat),
+            fn (Reservation $reservation): array => $this->toListItem($reservation, $tz, $timeFormat, $now),
             $result['items'],
         );
 
@@ -49,6 +54,7 @@ class IndexReservationController extends Controller
                 'period' => $period,
                 'starts_on' => $startsOn,
                 'ends_on' => $endsOn,
+                'status' => $status,
             ],
             'filterRooms' => array_map(
                 fn (OccupancyRoom $room): array => [
@@ -64,10 +70,15 @@ class IndexReservationController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function toListItem(Reservation $reservation, DateTimeZone $timezone, string $timeFormat): array
-    {
+    private function toListItem(
+        Reservation $reservation,
+        DateTimeZone $timezone,
+        string $timeFormat,
+        DateTimeImmutable $now,
+    ): array {
         $startsAt = $reservation->startsAt->setTimezone($timezone);
         $endsAt = $reservation->endsAt->setTimezone($timezone);
+        $status = $reservation->listStatus($now);
 
         return [
             'id' => $reservation->id,
@@ -79,8 +90,12 @@ class IndexReservationController extends Controller
             'starts_at' => $startsAt->format($timeFormat),
             'ends_at' => $endsAt->format($timeFormat),
             'participants' => $reservation->participants,
-            'status' => 'active',
-            'status_label' => 'Ativa',
+            'status' => $status,
+            'status_label' => match ($status) {
+                'cancelled' => 'Cancelada',
+                'passed' => 'Passada',
+                default => 'Ativa',
+            },
         ];
     }
 

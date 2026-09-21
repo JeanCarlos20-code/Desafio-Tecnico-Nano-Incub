@@ -14,7 +14,7 @@ final class FakeReservationRepository implements ReservationRepository
     /** @var list<array{roomId: string, responsible: string, title: string, startsAt: DateTimeImmutable, endsAt: DateTimeImmutable, participants: int}> */
     public array $created = [];
 
-    /** @var list<array{page: int, perPage: int, roomId: ?string, rangeStart: ?DateTimeImmutable, rangeEndExclusive: ?DateTimeImmutable}> */
+    /** @var list<array{page: int, perPage: int, roomId: ?string, rangeStart: ?DateTimeImmutable, rangeEndExclusive: ?DateTimeImmutable, status: string}> */
     public array $listed = [];
 
     /** @var list<array{id: string, cancelledAt: DateTimeImmutable}> */
@@ -82,13 +82,23 @@ final class FakeReservationRepository implements ReservationRepository
         ?string $roomId,
         ?DateTimeImmutable $rangeStart,
         ?DateTimeImmutable $rangeEndExclusive,
+        string $status = 'active',
     ): array {
-        $this->listed[] = compact('page', 'perPage', 'roomId', 'rangeStart', 'rangeEndExclusive');
+        $this->listed[] = compact('page', 'perPage', 'roomId', 'rangeStart', 'rangeEndExclusive', 'status');
 
-        $items = array_values(array_filter(
-            $this->reservations,
-            fn (Reservation $reservation): bool => $reservation->cancelledAt === null,
-        ));
+        $items = array_values($this->reservations);
+
+        if ($status === 'active') {
+            $items = array_values(array_filter(
+                $items,
+                fn (Reservation $reservation): bool => $reservation->cancelledAt === null,
+            ));
+        } elseif ($status === 'cancelled') {
+            $items = array_values(array_filter(
+                $items,
+                fn (Reservation $reservation): bool => $reservation->cancelledAt !== null,
+            ));
+        }
 
         return [
             'items' => array_slice($items, ($page - 1) * $perPage, $perPage),
@@ -98,13 +108,7 @@ final class FakeReservationRepository implements ReservationRepository
 
     public function hasAny(): bool
     {
-        foreach ($this->reservations as $reservation) {
-            if ($reservation->cancelledAt === null) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->reservations !== [];
     }
 
     public function findById(string $id): ?Reservation

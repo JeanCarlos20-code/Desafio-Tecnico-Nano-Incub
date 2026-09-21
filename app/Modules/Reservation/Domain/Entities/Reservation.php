@@ -19,4 +19,17 @@ final class Reservation
         public readonly ?DateTimeImmutable $updatedAt,
         public readonly string $roomName = '',
     ) {}
+
+    public function listStatus(DateTimeImmutable $now): string
+    {
+        if ($this->cancelledAt !== null) {
+            return 'cancelled';
+        }
+
+        if ($this->endsAt < $now) {
+            return 'passed';
+        }
+
+        return 'active';
+    }
 }

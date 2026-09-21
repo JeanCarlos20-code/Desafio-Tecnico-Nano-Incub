@@ -31,7 +31,7 @@ final class FakeRoomRepository implements RoomRepository
         $this->rooms[$room->id] = $room;
     }
 
-    public function listPage(int $page, int $perPage, string $status = 'all'): array
+    public function listPage(int $page, int $perPage, string $status = 'active'): array
     {
         $this->listed[] = compact('page', 'perPage', 'status');
 
