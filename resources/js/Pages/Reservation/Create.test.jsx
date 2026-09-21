@@ -213,7 +213,10 @@ describe('Reservation/Create', () => {
         renderCreate({ data: { date: '2026-09-21' } }, rooms, 'UTC');
 
         expect(screen.getByLabelText(/^Data/)).toHaveAttribute('min', '2026-09-21');
+        expect(screen.getByLabelText(/^Data/)).toHaveAttribute('lang', 'pt-BR');
         expect(screen.getByLabelText(/Horário de início/)).toHaveAttribute('min', '08:00');
+        expect(screen.getByLabelText(/Horário de início/)).toHaveAttribute('lang', 'pt-BR');
+        expect(screen.getByLabelText(/Horário de término/)).toHaveAttribute('lang', 'pt-BR');
     });
 
     it('omits start-time min when the selected date is after today', () => {

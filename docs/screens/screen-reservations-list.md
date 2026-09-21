@@ -31,13 +31,14 @@ Reference file:
 
 Provide a central administrative view where the user can:
 
-- view active room reservations in chronological order;
+- view room reservations in chronological order (default **Ativas** hides cancelled rows);
 - filter reservations by room;
-- filter reservations by day;
+- filter reservations by status (Todas / Ativas / Canceladas);
+- filter reservations by period preset or by an inclusive start/end date range;
 - open the new reservation form;
 - open the partial edit form (`Editar`) for title and responsible only;
 - cancel an active reservation after confirmation;
-- verify that a canceled reservation disappears from the list and no longer blocks its time interval.
+- verify that a canceled reservation stays listed when Status is Todas or Canceladas, and that occupancy still frees the interval.
 
 Reservation data must come from the backend. Example rows from the visual reference must not be hardcoded in the React component.
 
@@ -97,18 +98,22 @@ The button must remain easy to locate and operate at every supported viewport si
 
 ## Filters
 
-The page provides two server-driven filters.
+The page provides server-driven filters.
 
 | Filter | Control | Query parameter | Default |
 | --- | --- | --- | --- |
-| `Sala` | Select | `room_id` | All rooms |
-| `Data` | Date input | `date` | Current local date |
+| `Sala` | Select | `room_id` | All rooms (omit `room_id`) |
+| `Status` | Select | `status` (`all`, `active`, `cancelled`) | Ativas (`active`; omit `status`) |
+| `Período` | Radio group | `period` (`all`, `today`, `tomorrow`, `week`) | `Hoje` (`today`) |
+| `Data inicial` / `Data final` | Date inputs | `starts_on` / `ends_on` (`Y-m-d`) | Empty (period presets apply) |
 
 Example URL:
 
 ```text
-/reservations?room_id=1&date=2026-09-21
+/reservations?room_id=1&period=today&status=all
 ```
+
+Past calendar days use `Data inicial` and `Data final`. Do not add a past-meetings radio or a `yesterday` period.
 
 ### Room filter
 
@@ -124,19 +129,38 @@ Requirements:
 
 - selecting a room displays only reservations assigned to that room;
 - `Todas as salas` removes the room restriction;
-- preserve the selected day when the room changes;
+- preserve the selected period, range, and status when the room changes;
 - include inactive rooms when they have reservation history so administrators can still locate historical records;
 - use the room identifier in the query string, not the room name.
 
-### Day filter
+### Status filter
 
-The date input uses the visible Brazilian format `DD/MM/YYYY`, while the query string uses `YYYY-MM-DD`.
+The select is labelled `Status` and displays:
+
+```text
+Todas
+Ativas
+Canceladas
+```
 
 Requirements:
 
-- selecting a date displays reservations whose start belongs to that local calendar day;
-- preserve the room selection when the day changes;
-- interpret the day using the application's configured timezone;
+- `Ativas` (`status=active`, omitted from the URL) lists only rows with `cancelled_at` null, including meetings whose `ends_at` is already past (shown as `Passada`);
+- `Canceladas` (`status=cancelled`) lists only rows with `cancelled_at` set;
+- `Todas` (`status=all`) lists both active and cancelled rows that also match room, period, and range;
+- omitted `status` on `GET /reservations` is treated as `active`;
+- preserve room, period, range, and `limit` when Status changes, and reset `page` to 1.
+
+### Period and range filters
+
+The Período radios are `Todos`, `Hoje`, `Amanhã`, and `1 semana` (`period=all|today|tomorrow|week`). Omitted `period` is `today` (`Hoje`). `Data inicial` and `Data final` send `starts_on` and `ends_on` as `Y-m-d`. A complete range overrides the period preset for the `starts_at` window.
+
+Requirements:
+
+- selecting a preset displays reservations whose start belongs to that local window;
+- a complete range is inclusive of both calendar days;
+- preserve the room and status selection when the period or range changes;
+- interpret dates using the application's configured timezone;
 - never compare dates using an accidental UTC boundary;
 - update the results through Inertia while preserving scroll and component state where appropriate.
 
@@ -160,7 +184,7 @@ The table displays one row per reservation.
 | `Título` | Meeting title or purpose | Plain text with safe wrapping or truncation |
 | `Início` | Start datetime | `HH:mm` when a day is selected |
 | `Fim` | End datetime | `HH:mm` when a day is selected |
-| `Participantes` | Participant count | Positive integer |
+| `Participantes` | Participant count | Positive integer centered with the `Participantes` header (`text-center`) |
 | `Situação` | Reservation state | Text badge |
 | `Ações` | Available operations | `Editar` and `Cancelar` for eligible active reservations |
 
@@ -176,19 +200,19 @@ start_at ASC
 
 This places the earliest reservation of the selected day first and the later reservations afterward. Reservations with the same start time must use a deterministic secondary order, such as reservation ID.
 
-Canceled reservations do not appear in this list. Cancellation is treated like deletion for the list: the row is gone after a successful cancel, and `ListReservations` returns only rows with `cancelled_at` null. The record remains in the database so the interval is free (RF12) and so audit is possible outside this screen.
+Canceled reservations appear in this list when Status is `Todas` or `Canceladas`. Default Ativas still hides them. Cancellation is not a hard delete: the record remains so the interval is free (RF12). Occupancy queries keep ignoring `cancelled_at` rows.
 
 ## Status badges
 
-This list only contains active reservations. The status column still shows:
+The status column is derived at list time from `cancelledAt` and `endsAt` versus now. Occupancy still uses only `cancelled_at`.
 
-| Backend value | Visible label | Visual treatment |
-| --- | --- | --- |
-| `active` | `Ativa` | Green text on a light-green background |
+| Backend value | Visible label | Visual treatment | Rule |
+| --- | --- | --- | --- |
+| `active` | `Ativa` | Green text on a light-green background | Not cancelled and `endsAt` is not before now |
+| `passed` | `Passada` | Slate/gray text on a light-gray background | Not cancelled and `endsAt` is before now |
+| `cancelled` | `Cancelada` | Slate/gray text on a light-gray background | `cancelledAt` is set (wins over a past `endsAt`) |
 
-Do not render a `Cancelada` row or badge here. After cancellation the row is removed.
-
-If an active reservation has already ended, it may continue to use `Ativa` if the domain model only distinguishes active and canceled. Do not invent a completed status unless it is explicitly modeled and documented.
+Default Ativas hides cancelled rows and still lists past non-cancelled rows as `Passada`. With Todas or Canceladas, cancelled rows stay visible as `Cancelada`. `Editar` and `Cancelar` remain only on `active`.
 
 ## Row actions
 
@@ -210,9 +234,9 @@ Active reservations that are eligible for cancellation display the button:
 Cancelar
 ```
 
-`Editar` sits beside `Cancelar`. There is no canceled row in this list, so there is no unavailable dash state to render.
+`Editar` sits beside `Cancelar`. Rows whose `status` is not `active` hide both actions and show `—`.
 
-The cancellation action sets `cancelled_at`; it must not hard-delete the reservation record. The row then disappears from the list.
+The cancellation action sets `cancelled_at`; it must not hard-delete the reservation record. On default Ativas the row leaves the list. On Todas it stays as `Cancelada`.
 
 ## Cancellation confirmation
 
@@ -238,7 +262,7 @@ Cancelar reserva
 4. Selecting `Voltar` or pressing `Escape` closes the dialog without changing data.
 5. Selecting `Cancelar reserva` sends `PATCH /reservations/{reservation}/cancel`.
 6. While processing, dialog controls are disabled and the destructive action changes to `Cancelando...`.
-7. After success, the dialog closes and the row disappears from the list.
+7. After success, the dialog closes. On Ativas the row leaves the list; on Todas it remains as `Cancelada`.
 8. The canceled interval immediately becomes available for a new reservation.
 9. Focus returns to an appropriate position in the updated table and the result is announced.
 
@@ -259,7 +283,7 @@ The backend must perform cancellation consistently:
 - ensure canceled reservations are excluded from conflict checks;
 - prevent partial changes if the operation fails.
 
-Reservations canceled as part of room deactivation or room deletion follow the same rule: they leave the list and stop blocking the interval. They must not remain visible as `Cancelada`.
+Reservations canceled as part of room deactivation or room deletion follow the same rule: they leave the default Ativas list, stay visible as `Cancelada` when Status is Todas, and stop blocking the interval.
 
 ## Empty and filtered states
 
@@ -276,13 +300,13 @@ Nova reserva
 
 ### No filter results
 
-When reservations exist but none match the selected room and day:
+When reservations exist (including cancelled-only catalogues) but none match the selected filters:
 
 ```text
 Nenhuma reserva encontrada para os filtros selecionados.
 ```
 
-Provide a `Limpar filtros` action that restores `Todas as salas` and the default day.
+Provide a `Limpar filtros` action that visits `period=today` and omits `status`, `room_id`, and the date range.
 
 ## Loading and error states
 
@@ -327,7 +351,7 @@ Use server-driven pagination when the filtered `total` is greater than `limit`. 
 
 Requirements:
 
-- preserve `room_id`, `period`, `starts_on`, and `ends_on` across pages, plus `page` and `limit`;
+- preserve `room_id`, `period`, `starts_on`, `ends_on`, and `status` across pages, plus `page` and `limit` (`status` is omitted when Ativas);
 - reset to `page=1` when a filter changes and keep the current `limit`;
 - expose previous and next controls accessibly;
 - retain chronological ordering across all pages.
@@ -362,7 +386,7 @@ Requirements:
 ## Accessibility
 
 - use semantic navigation landmarks for the sidebar and account menu;
-- use explicit labels for both filters;
+- use explicit labels for the room, status, period, and date filters;
 - use a real table with associated column headers on larger layouts;
 - provide accessible names for icon-only buttons;
 - expose status through text, not color alone;
@@ -393,6 +417,8 @@ Requirements:
 - active room filter;
 - all-rooms filter;
 - selected day filter;
+- Status Ativas, Todas, and Canceladas;
+- ended non-cancelled row as `Passada` with `—` actions (still on Ativas);
 - empty unfiltered state;
 - empty filtered state;
 - loading state;
@@ -401,28 +427,33 @@ Requirements:
 - cancellation successful;
 - cancellation failed;
 - active reservation row;
-- canceled reservation removed from the list;
+- canceled reservation as `Cancelada` with `—` actions (Todas / Canceladas);
+- canceled reservation omitted from default Ativas;
 - expired or unauthenticated session.
 
 ## Acceptance criteria
 
 - [ ] Only authenticated administrators can access `/reservations`.
 - [ ] The list displays ID, room, responsible person, title, start, end, participant count, situation (`Situação`), and actions.
+- [ ] `Participantes` header and cells share `text-center`.
 - [ ] Reservations are ordered by start datetime in ascending chronological order.
 - [ ] The room filter displays only reservations from the selected room.
-- [ ] The day filter displays only reservations belonging to the selected local calendar day.
-- [ ] Room and day filters can be combined.
-- [ ] Active filters are represented in the URL and preserved during pagination.
+- [ ] The Status filter defaults to Ativas and lists Todas / Ativas / Canceladas.
+- [ ] Omitted `status` is treated as `active`; `all` and `cancelled` isolate those sets.
+- [ ] Period presets (`all`, `today`, `tomorrow`, `week`) and `starts_on`/`ends_on` are the only time filters.
+- [ ] Room, status, period, and range filters can be combined.
+- [ ] Active filters are represented in the URL and preserved during pagination (`status` omitted when Ativas).
 - [ ] `Nova reserva` navigates to `/reservations/create`.
-- [ ] The list displays only reservations with `cancelled_at` null.
+- [ ] Default Ativas lists only reservations with `cancelled_at` null, including past meetings labeled `Passada`.
 - [ ] The `Ações` column does not display a calendar or reservation-details icon.
 - [ ] Eligible active reservations display `Editar` (to `/reservations/{id}/edit`) beside `Cancelar`.
+- [ ] `Passada` and `Cancelada` rows hide `Editar` and `Cancelar` and show `—`.
 - [ ] Canceling a reservation always requires explicit confirmation.
 - [ ] The cancellation dialog identifies the reservation being affected.
 - [ ] Canceling sets `cancelled_at` instead of hard-deleting the reservation record.
-- [ ] A canceled reservation disappears from the list and no longer blocks its time interval.
+- [ ] A canceled reservation leaves the default Ativas list, stays as `Cancelada` on Todas, and no longer blocks its time interval.
 - [ ] A repeated cancellation request does not corrupt reservation state.
-- [ ] Reservations canceled during room deactivation or deletion also disappear from the list.
+- [ ] Reservations canceled during room deactivation or deletion also leave Ativas and appear as `Cancelada` on Todas.
 - [ ] The screen provides appropriate empty, loading, and error states.
 - [ ] The authenticated administrator data is not hardcoded.
 - [ ] The screen works correctly on desktop, tablet, and mobile.

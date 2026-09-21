@@ -116,6 +116,7 @@ export default function Edit({
                         <input
                             id="date"
                             type="date"
+                            lang="pt-BR"
                             value={date}
                             disabled
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-600"
@@ -126,6 +127,7 @@ export default function Edit({
                         <input
                             id="start_time"
                             type="time"
+                            lang="pt-BR"
                             value={start_time}
                             disabled
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-600"
@@ -136,6 +138,7 @@ export default function Edit({
                         <input
                             id="end_time"
                             type="time"
+                            lang="pt-BR"
                             value={end_time}
                             disabled
                             className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-600"

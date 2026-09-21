@@ -21,15 +21,15 @@ class RoomIndexHttpTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_authenticated_index_renders_non_deleted_rooms_including_inactive_excluding_soft_deleted_ordered_by_id(): void
+    public function test_authenticated_index_omitted_status_defaults_to_active_excludes_inactive_and_soft_deleted(): void
     {
         $user = UserModel::factory()->create();
-        $first = Room::factory()->create([
+        $inactive = Room::factory()->create([
             'name' => 'Sala A',
             'capacity' => 4,
             'is_active' => false,
         ]);
-        $second = Room::factory()->create([
+        $active = Room::factory()->create([
             'name' => 'Sala B',
             'capacity' => 8,
             'is_active' => true,
@@ -39,24 +39,24 @@ class RoomIndexHttpTest extends TestCase
         ]);
         $trashed->delete();
 
-        $ordered = Room::query()->orderBy('id')->get();
-        $this->assertCount(5, $ordered);
-        $firstHasReservations = Reservation::query()->where('room_id', $ordered[0]->id)->exists();
+        $orderedActive = Room::query()->where('is_active', true)->orderBy('id')->get();
+        $this->assertCount(4, $orderedActive);
+        $firstHasReservations = Reservation::query()->where('room_id', $orderedActive[0]->id)->exists();
 
         $this->actingAs($user)
             ->get(route('rooms.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Room/Index')
-                ->has('rooms.data', 5)
-                ->where('rooms.data.0.id', (string) $ordered[0]->id)
-                ->where('rooms.data.0.name', $ordered[0]->name)
-                ->where('rooms.data.0.capacity', $ordered[0]->capacity)
-                ->where('rooms.data.0.status', $ordered[0]->is_active ? 'Ativa' : 'Inativa')
-                ->where('rooms.data.0.created_at', $ordered[0]->created_at->timezone(config('app.timezone'))->format('d/m/Y'))
-                ->where('rooms.data.1.id', (string) $ordered[1]->id)
-                ->where('rooms.data.1.status', $ordered[1]->is_active ? 'Ativa' : 'Inativa')
-                ->where('rooms.total', 5)
+                ->has('rooms.data', 4)
+                ->where('rooms.data.0.id', (string) $orderedActive[0]->id)
+                ->where('rooms.data.0.name', $orderedActive[0]->name)
+                ->where('rooms.data.0.capacity', $orderedActive[0]->capacity)
+                ->where('rooms.data.0.status', 'Ativa')
+                ->where('rooms.data.0.created_at', $orderedActive[0]->created_at->timezone(config('app.timezone'))->format('d/m/Y'))
+                ->where('rooms.data.1.id', (string) $orderedActive[1]->id)
+                ->where('rooms.data.1.status', $orderedActive[1]->is_active ? 'Ativa' : 'Inativa')
+                ->where('rooms.total', 4)
                 ->where('rooms.page', 1)
                 ->where('rooms.limit', 20)
                 ->missing('rooms.per_page')
@@ -65,13 +65,13 @@ class RoomIndexHttpTest extends TestCase
                 ->missing('rooms.next_page_url')
                 ->missing('rooms.prev_page_url')
                 ->missing('rooms.links')
-                ->where('filters.status', 'all')
+                ->where('filters.status', 'active')
                 ->where('hasAny', true)
                 ->where('rooms.data.0.has_reservations', $firstHasReservations)
-                ->where('rooms.data', function (Collection $rows) use ($first, $second): bool {
+                ->where('rooms.data', function (Collection $rows) use ($inactive, $active): bool {
                     $ids = $rows->pluck('id');
 
-                    return $ids->contains($first->id) && $ids->contains($second->id);
+                    return ! $ids->contains($inactive->id) && $ids->contains($active->id);
                 })
             );
 
@@ -97,6 +97,11 @@ class RoomIndexHttpTest extends TestCase
                 ->where('filters.status', 'all')
                 ->has('rooms.data', 5)
                 ->where('hasAny', true)
+                ->where('rooms.data', function (Collection $rooms) use ($active, $inactive): bool {
+                    $ids = $rooms->pluck('id');
+
+                    return $ids->contains($active->id) && $ids->contains($inactive->id);
+                })
             );
 
         $this->actingAs($user)

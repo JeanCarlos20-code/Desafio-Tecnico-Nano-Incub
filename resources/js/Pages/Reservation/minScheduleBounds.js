@@ -6,7 +6,7 @@ function pad(value) {
 }
 
 function partsInTimeZone(now, timeZone) {
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
         timeZone: timeZone || 'UTC',
         year: 'numeric',
         month: '2-digit',
