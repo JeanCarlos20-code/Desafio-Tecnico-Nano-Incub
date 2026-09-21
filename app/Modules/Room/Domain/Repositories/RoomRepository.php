@@ -9,7 +9,7 @@ interface RoomRepository
     /**
      * @return array{items: list<Room>, total: int}
      */
-    public function listPage(int $page, int $perPage, string $status = 'all'): array;
+    public function listPage(int $page, int $perPage, string $status = 'active'): array;
 
     public function findById(string $id): ?Room;
 
